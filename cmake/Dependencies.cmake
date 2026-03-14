@@ -24,6 +24,36 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 
 # ============================================================================
+# QCustomPlot - Qt图表库
+# ============================================================================
+FetchContent_Declare(
+    qcustomplot
+    GIT_REPOSITORY https://github.com/VSRonin/QCustomPlot.git
+    GIT_TAG        v2.1.1
+)
+FetchContent_MakeAvailable(qcustomplot)
+
+# ============================================================================
+# Lua - 脚本引擎
+# ============================================================================
+FetchContent_Declare(
+    lua
+    GIT_REPOSITORY https://github.com/walterschell/Lua.git
+    GIT_TAG        v5.4.4
+)
+FetchContent_MakeAvailable(lua)
+
+# ============================================================================
+# sol2 - Lua C++绑定库
+# ============================================================================
+FetchContent_Declare(
+    sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG        v3.3.0
+)
+FetchContent_MakeAvailable(sol2)
+
+# ============================================================================
 # Google Test - 单元测试框架 (可选)
 # ============================================================================
 option(BUILD_TESTS "Build unit tests" ON)
@@ -46,6 +76,9 @@ endif()
 message(STATUS "=== Dependencies ===")
 message(STATUS "nlohmann/json: v3.11.2")
 message(STATUS "spdlog: v1.12.0")
+message(STATUS "QCustomPlot: v2.1.1")
+message(STATUS "Lua: v5.4.4")
+message(STATUS "sol2: v3.3.0")
 if(BUILD_TESTS)
     message(STATUS "Google Test: v1.14.0")
 endif()

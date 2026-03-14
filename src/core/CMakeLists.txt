@@ -4,11 +4,8 @@
 set(CORE_SOURCES
     devicemanager/device.cpp
     devicemanager/devicemanager.cpp
-    protocol/protocolengine.cpp
-    protocol/protocolparser.cpp
-    script/scriptengine.cpp
-    script/scriptparser.cpp
     datacenter/datastore.cpp
+    scriptengine/luascriptengine.cpp
 )
 
 # 头文件
@@ -17,14 +14,9 @@ set(CORE_HEADERS
     devicemanager/idevicemanager.h
     devicemanager/device.h
     devicemanager/devicemanager.h
-    protocol/iprotocol.h
-    protocol/protocolengine.h
-    protocol/protocolparser.h
-    script/iscript.h
-    script/scriptengine.h
-    script/scriptparser.h
     datacenter/idatacenter.h
     datacenter/datastore.h
+    scriptengine/luascriptengine.h
 )
 
 # 创建静态库
@@ -41,6 +33,8 @@ target_include_directories(core PUBLIC
 # 链接依赖
 target_link_libraries(core PUBLIC
     utils
+    lua
+    sol2
     Qt${QT_VERSION_MAJOR}::Core
 )
 

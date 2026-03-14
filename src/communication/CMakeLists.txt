@@ -6,8 +6,7 @@ set(COMMUNICATION_SOURCES
     tcp/tcpclient.cpp
     tcp/tcpserver.cpp
     udp/udpsocket.cpp
-    modbus/modbus.cpp
-    can/canbus.cpp
+    modbus/modbusdevice.cpp
 )
 
 # 头文件
@@ -16,8 +15,7 @@ set(COMMUNICATION_HEADERS
     tcp/tcpclient.h
     tcp/tcpserver.h
     udp/udpsocket.h
-    modbus/modbus.h
-    can/canbus.h
+    modbus/modbusdevice.h
 )
 
 # 创建静态库
@@ -38,6 +36,7 @@ target_link_libraries(communication PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::SerialPort
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::SerialBus
 )
 
 # 导出头文件
