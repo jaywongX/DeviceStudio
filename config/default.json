@@ -1,0 +1,66 @@
+{
+  "application": {
+    "name": "DeviceStudio",
+    "version": "1.0.0",
+    "theme": "light",
+    "language": "zh_CN"
+  },
+  "devices": [],
+  "protocols": [
+    "resources/protocols/temp_sensor.json",
+    "resources/protocols/modbus_rtu.json"
+  ],
+  "log": {
+    "level": "info",
+    "path": "logs/",
+    "max_size_mb": 100,
+    "max_files": 10,
+    "pattern": "[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] %v"
+  },
+  "ui": {
+    "window": {
+      "width": 1280,
+      "height": 720,
+      "maximized": false
+    },
+    "font_size": 12,
+    "auto_save": true,
+    "auto_save_interval": 60
+  },
+  "communication": {
+    "serial": {
+      "default_baudrate": 115200,
+      "default_databits": 8,
+      "default_parity": "none",
+      "default_stopbits": 1,
+      "default_flowcontrol": "none"
+    },
+    "tcp": {
+      "default_port": 5000,
+      "timeout_ms": 5000
+    },
+    "udp": {
+      "default_port": 5000
+    }
+  },
+  "visualization": {
+    "chart": {
+      "max_points": 1000,
+      "refresh_interval_ms": 100,
+      "auto_scroll": true
+    },
+    "dashboard": {
+      "refresh_interval_ms": 100
+    }
+  },
+  "script": {
+    "default_timeout_ms": 5000,
+    "max_loop_count": 10000
+  },
+  "plugin": {
+    "auto_load": true,
+    "search_paths": [
+      "plugins/"
+    ]
+  }
+}
