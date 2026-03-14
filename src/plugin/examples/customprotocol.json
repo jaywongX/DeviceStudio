@@ -1,0 +1,9 @@
+{
+    "name": "CustomProtocol",
+    "version": "1.0.0",
+    "description": "自定义协议插件示例",
+    "author": "DeviceStudio Team",
+    "type": "protocol",
+    "api_version": "1.0",
+    "dependencies": []
+}

@@ -7,6 +7,7 @@ set(COMMUNICATION_SOURCES
     tcp/tcpserver.cpp
     udp/udpsocket.cpp
     modbus/modbusdevice.cpp
+    can/canbus.cpp
 )
 
 # 头文件
@@ -16,6 +17,7 @@ set(COMMUNICATION_HEADERS
     tcp/tcpserver.h
     udp/udpsocket.h
     modbus/modbusdevice.h
+    can/canbus.h
 )
 
 # 创建静态库

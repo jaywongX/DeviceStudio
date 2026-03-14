@@ -1,0 +1,9 @@
+{
+    "name": "MockCommunication",
+    "version": "1.0.0",
+    "description": "模拟通信插件（测试用）",
+    "author": "DeviceStudio Team",
+    "type": "communication",
+    "api_version": "1.0",
+    "dependencies": []
+}

@@ -5,6 +5,7 @@ set(TEST_SOURCES
     utils/test_logger.cpp
     utils/test_configmanager.cpp
     core/test_device.cpp
+    test_protocol.cpp
 )
 
 # 创建测试可执行文件

@@ -8,9 +8,14 @@
 #include "luascriptengine.h"
 #include "core/devicemanager/devicemanager.h"
 #include "core/datacenter/datastore.h"
+#include "core/protocol/checksum.h"
 #include "utils/log/logger.h"
 #include <QFile>
 #include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
+#include <QCryptographicHash>
+#include <QRandomGenerator>
 
 namespace DeviceStudio {
 
@@ -29,6 +34,16 @@ LuaScriptEngine::LuaScriptEngine(const LuaEngineConfig& config, QObject* parent)
 
 LuaScriptEngine::~LuaScriptEngine()
 {
+    stopAllTimers();
+}
+
+void LuaScriptEngine::stopAllTimers()
+{
+    for (auto it = timers_.begin(); it != timers_.end(); ++it) {
+        it.value()->stop();
+        delete it.value();
+    }
+    timers_.clear();
 }
 
 void LuaScriptEngine::setConfig(const LuaEngineConfig& config)
@@ -77,6 +92,11 @@ void LuaScriptEngine::initializeLua()
     // 注册标准库
     registerStandardLibraries();
     registerUtilityAPI();
+    registerProtocolAPI();
+    registerFileAPI();
+    registerTimerAPI();
+    registerStringAPI();
+    registerMathAPI();
     
     DS_LOG_INFO("Lua script engine initialized");
 }
@@ -243,6 +263,445 @@ void LuaScriptEngine::registerUtilityAPI()
     });
     
     DS_LOG_DEBUG("Utility API registered");
+}
+
+void LuaScriptEngine::registerProtocolAPI()
+{
+    // 创建Protocol命名空间
+    sol::table protocol = lua_->create_named_table("Protocol");
+    
+    // 校验和计算
+    protocol.set_function("checksumXOR", [](const std::string& data) -> int {
+        quint8 checksum = Checksum::calculateXOR(QByteArray::fromRawData(data.data(), data.size()));
+        return checksum;
+    });
+    
+    protocol.set_function("checksumSUM", [](const std::string& data) -> int {
+        quint8 checksum = Checksum::calculateSUM(QByteArray::fromRawData(data.data(), data.size()));
+        return checksum;
+    });
+    
+    protocol.set_function("checksumSUM16", [](const std::string& data) -> int {
+        quint16 checksum = Checksum::calculateSUM16(QByteArray::fromRawData(data.data(), data.size()));
+        return checksum;
+    });
+    
+    protocol.set_function("checksumCRC16", [](const std::string& data, const std::string& type) -> int {
+        QByteArray ba = QByteArray::fromRawData(data.data(), data.size());
+        if (type == "modbus") {
+            return Checksum::calculateCRC16(ba, Checksum::CRC16Type::Modbus);
+        } else {
+            return Checksum::calculateCRC16(ba, Checksum::CRC16Type::CCITT);
+        }
+    });
+    
+    protocol.set_function("checksumCRC32", [](const std::string& data) -> int {
+        quint32 checksum = Checksum::calculateCRC32(QByteArray::fromRawData(data.data(), data.size()));
+        return static_cast<int>(checksum);
+    });
+    
+    // 数据打包
+    protocol.set_function("pack", [](sol::table fields, const std::string& format) -> std::string {
+        QByteArray result;
+        int index = 1;
+        for (auto& pair : fields) {
+            if (pair.second.is<int>()) {
+                int val = pair.second.as<int>();
+                if (format == "big") {
+                    result.append(static_cast<char>((val >> 8) & 0xFF));
+                    result.append(static_cast<char>(val & 0xFF));
+                } else {
+                    result.append(static_cast<char>(val & 0xFF));
+                    result.append(static_cast<char>((val >> 8) & 0xFF));
+                }
+            } else if (pair.second.is<double>()) {
+                double val = pair.second.as<double>();
+                result.append(reinterpret_cast<char*>(&val), sizeof(double));
+            }
+            index++;
+        }
+        return std::string(result.constData(), result.size());
+    });
+    
+    // 数据解包
+    protocol.set_function("unpack", [this](const std::string& data, const std::string& format) -> sol::table {
+        sol::table result = lua_->create_table();
+        QByteArray ba = QByteArray::fromRawData(data.data(), data.size());
+        int offset = 0;
+        for (char c : format) {
+            if (offset >= ba.size()) break;
+            if (c == 'b') {
+                result.add(static_cast<int>(static_cast<unsigned char>(ba[offset])));
+                offset += 1;
+            } else if (c == 'h') {
+                int val = (static_cast<unsigned char>(ba[offset]) << 8) | static_cast<unsigned char>(ba[offset + 1]);
+                result.add(val);
+                offset += 2;
+            } else if (c == 'l') {
+                int val = static_cast<unsigned char>(ba[offset]) | 
+                         (static_cast<unsigned char>(ba[offset + 1]) << 8) |
+                         (static_cast<unsigned char>(ba[offset + 2]) << 16) |
+                         (static_cast<unsigned char>(ba[offset + 3]) << 24);
+                result.add(val);
+                offset += 4;
+            }
+        }
+        return result;
+    });
+    
+    // 帧构建
+    protocol.set_function("buildFrame", [](int header, const std::string& data, int tail) -> std::string {
+        QByteArray frame;
+        frame.append(static_cast<char>(header));
+        frame.append(static_cast<char>(data.size()));
+        frame.append(QByteArray::fromRawData(data.data(), data.size()));
+        frame.append(static_cast<char>(tail));
+        return std::string(frame.constData(), frame.size());
+    });
+    
+    DS_LOG_DEBUG("Protocol API registered");
+}
+
+void LuaScriptEngine::registerFileAPI()
+{
+    // 创建File命名空间
+    sol::table file = lua_->create_named_table("File");
+    
+    // 读取文件
+    file.set_function("read", [](const std::string& path) -> std::string {
+        QFile f(QString::fromStdString(path));
+        if (!f.open(QIODevice::ReadOnly)) {
+            return "";
+        }
+        QByteArray data = f.readAll();
+        f.close();
+        return std::string(data.constData(), data.size());
+    });
+    
+    // 写入文件
+    file.set_function("write", [](const std::string& path, const std::string& data) -> bool {
+        QFile f(QString::fromStdString(path));
+        if (!f.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        bool result = f.write(data.data(), data.size()) == static_cast<qint64>(data.size());
+        f.close();
+        return result;
+    });
+    
+    // 追加文件
+    file.set_function("append", [](const std::string& path, const std::string& data) -> bool {
+        QFile f(QString::fromStdString(path));
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Append)) {
+            return false;
+        }
+        bool result = f.write(data.data(), data.size()) == static_cast<qint64>(data.size());
+        f.close();
+        return result;
+    });
+    
+    // 检查文件是否存在
+    file.set_function("exists", [](const std::string& path) -> bool {
+        return QFile::exists(QString::fromStdString(path));
+    });
+    
+    // 删除文件
+    file.set_function("remove", [](const std::string& path) -> bool {
+        return QFile::remove(QString::fromStdString(path));
+    });
+    
+    // 重命名文件
+    file.set_function("rename", [](const std::string& oldPath, const std::string& newPath) -> bool {
+        return QFile::rename(QString::fromStdString(oldPath), QString::fromStdString(newPath));
+    });
+    
+    // 获取文件大小
+    file.set_function("size", [](const std::string& path) -> long long {
+        QFileInfo info(QString::fromStdString(path));
+        return info.size();
+    });
+    
+    // 列出目录
+    file.set_function("listDir", [this](const std::string& path) -> sol::table {
+        sol::table result = lua_->create_table();
+        QDir dir(QString::fromStdString(path));
+        QStringList entries = dir.entryList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString& entry : entries) {
+            result.add(entry.toStdString());
+        }
+        return result;
+    });
+    
+    // 创建目录
+    file.set_function("mkdir", [](const std::string& path) -> bool {
+        return QDir().mkpath(QString::fromStdString(path));
+    });
+    
+    // 复制文件
+    file.set_function("copy", [](const std::string& src, const std::string& dst) -> bool {
+        return QFile::copy(QString::fromStdString(src), QString::fromStdString(dst));
+    });
+    
+    // 文件哈希
+    file.set_function("md5", [](const std::string& path) -> std::string {
+        QFile f(QString::fromStdString(path));
+        if (!f.open(QIODevice::ReadOnly)) {
+            return "";
+        }
+        QByteArray hash = QCryptographicHash::hash(f.readAll(), QCryptographicHash::Md5);
+        f.close();
+        return hash.toHex().toStdString();
+    });
+    
+    DS_LOG_DEBUG("File API registered");
+}
+
+void LuaScriptEngine::registerTimerAPI()
+{
+    // 创建Timer命名空间
+    sol::table timer = lua_->create_named_table("Timer");
+    
+    // 单次定时器
+    timer.set_function("singleShot", [this](int ms, sol::function callback) {
+        int id = nextTimerId_++;
+        QTimer* t = new QTimer(this);
+        t->setSingleShot(true);
+        connect(t, &QTimer::timeout, this, [this, id, callback]() {
+            if (callback.valid()) {
+                try {
+                    callback(id);
+                } catch (...) {}
+            }
+            timers_.remove(id);
+            sender()->deleteLater();
+        });
+        timers_[id] = t;
+        t->start(ms);
+        return id;
+    });
+    
+    // 重复定时器
+    timer.set_function("start", [this](int ms, sol::function callback) -> int {
+        int id = nextTimerId_++;
+        QTimer* t = new QTimer(this);
+        connect(t, &QTimer::timeout, this, [this, id, callback]() {
+            if (callback.valid()) {
+                try {
+                    callback(id);
+                } catch (...) {}
+            }
+        });
+        timers_[id] = t;
+        t->start(ms);
+        return id;
+    });
+    
+    // 停止定时器
+    timer.set_function("stop", [this](int id) {
+        if (timers_.contains(id)) {
+            timers_[id]->stop();
+            timers_[id]->deleteLater();
+            timers_.remove(id);
+            return true;
+        }
+        return false;
+    });
+    
+    // 检查定时器是否运行
+    timer.set_function("isRunning", [this](int id) -> bool {
+        return timers_.contains(id) && timers_[id]->isActive();
+    });
+    
+    // 停止所有定时器
+    timer.set_function("stopAll", [this]() {
+        stopAllTimers();
+    });
+    
+    DS_LOG_DEBUG("Timer API registered");
+}
+
+void LuaScriptEngine::registerStringAPI()
+{
+    // 创建String命名空间
+    sol::table str = lua_->create_named_table("String");
+    
+    // 字符串分割
+    str.set_function("split", [this](const std::string& s, const std::string& sep) -> sol::table {
+        sol::table result = lua_->create_table();
+        QString str = QString::fromStdString(s);
+        QStringList parts = str.split(QString::fromStdString(sep));
+        for (const QString& part : parts) {
+            result.add(part.toStdString());
+        }
+        return result;
+    });
+    
+    // 字符串连接
+    str.set_function("join", [](sol::table parts, const std::string& sep) -> std::string {
+        QStringList list;
+        for (auto& pair : parts) {
+            if (pair.second.is<std::string>()) {
+                list.append(QString::fromStdString(pair.second.as<std::string>()));
+            }
+        }
+        return list.join(QString::fromStdString(sep)).toStdString();
+    });
+    
+    // 字符串替换
+    str.set_function("replace", [](const std::string& s, const std::string& from, const std::string& to) -> std::string {
+        QString str = QString::fromStdString(s);
+        return str.replace(QString::fromStdString(from), QString::fromStdString(to)).toStdString();
+    });
+    
+    // 正则匹配
+    str.set_function("match", [this](const std::string& s, const std::string& pattern) -> sol::table {
+        sol::table result = lua_->create_table();
+        QRegularExpression re(QString::fromStdString(pattern));
+        QRegularExpressionMatchIterator it = re.globalMatch(QString::fromStdString(s));
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            result.add(match.captured(0).toStdString());
+        }
+        return result;
+    });
+    
+    // 去除空白
+    str.set_function("trim", [](const std::string& s) -> std::string {
+        return QString::fromStdString(s).trimmed().toStdString();
+    });
+    
+    // 转小写
+    str.set_function("toLower", [](const std::string& s) -> std::string {
+        return QString::fromStdString(s).toLower().toStdString();
+    });
+    
+    // 转大写
+    str.set_function("toUpper", [](const std::string& s) -> std::string {
+        return QString::fromStdString(s).toUpper().toStdString();
+    });
+    
+    // 字符串填充
+    str.set_function("padLeft", [](const std::string& s, int width, const std::string& fill) -> std::string {
+        return QString::fromStdString(s).leftJustified(width, fill.empty() ? ' ' : fill[0]).toStdString();
+    });
+    
+    str.set_function("padRight", [](const std::string& s, int width, const std::string& fill) -> std::string {
+        return QString::fromStdString(s).rightJustified(width, fill.empty() ? ' ' : fill[0]).toStdString();
+    });
+    
+    // Base64编解码
+    str.set_function("toBase64", [](const std::string& s) -> std::string {
+        return QByteArray::fromRawData(s.data(), s.size()).toBase64().toStdString();
+    });
+    
+    str.set_function("fromBase64", [](const std::string& s) -> std::string {
+        QByteArray result = QByteArray::fromBase64(QByteArray::fromRawData(s.data(), s.size()));
+        return std::string(result.constData(), result.size());
+    });
+    
+    DS_LOG_DEBUG("String API registered");
+}
+
+void LuaScriptEngine::registerMathAPI()
+{
+    // 创建Math扩展命名空间
+    sol::table mathEx = lua_->create_named_table("MathEx");
+    
+    // 限制值范围
+    mathEx.set_function("clamp", [](double value, double min, double max) -> double {
+        return qBound(min, value, max);
+    });
+    
+    // 线性插值
+    mathEx.set_function("lerp", [](double a, double b, double t) -> double {
+        return a + (b - a) * t;
+    });
+    
+    // 随机整数
+    mathEx.set_function("randomInt", [](int min, int max) -> int {
+        return QRandomGenerator::global()->bounded(min, max + 1);
+    });
+    
+    // 随机浮点数
+    mathEx.set_function("randomFloat", [](double min, double max) -> double {
+        return min + QRandomGenerator::global()->generateDouble() * (max - min);
+    });
+    
+    // 角度转弧度
+    mathEx.set_function("degToRad", [](double deg) -> double {
+        return deg * M_PI / 180.0;
+    });
+    
+    // 弧度转角度
+    mathEx.set_function("radToDeg", [](double rad) -> double {
+        return rad * 180.0 / M_PI;
+    });
+    
+    // 字节数组转数值
+    mathEx.set_function("bytesToInt", [](const std::string& bytes, bool bigEndian) -> int {
+        QByteArray ba = QByteArray::fromRawData(bytes.data(), bytes.size());
+        if (ba.size() < 4) ba = ba.leftJustified(4, '\0');
+        if (bigEndian) {
+            return (static_cast<unsigned char>(ba[0]) << 24) |
+                   (static_cast<unsigned char>(ba[1]) << 16) |
+                   (static_cast<unsigned char>(ba[2]) << 8) |
+                   static_cast<unsigned char>(ba[3]);
+        } else {
+            return static_cast<unsigned char>(ba[0]) |
+                   (static_cast<unsigned char>(ba[1]) << 8) |
+                   (static_cast<unsigned char>(ba[2]) << 16) |
+                   (static_cast<unsigned char>(ba[3]) << 24);
+        }
+    });
+    
+    // 数值转字节数组
+    mathEx.set_function("intToBytes", [](int value, bool bigEndian) -> std::string {
+        QByteArray result(4, '\0');
+        if (bigEndian) {
+            result[0] = static_cast<char>((value >> 24) & 0xFF);
+            result[1] = static_cast<char>((value >> 16) & 0xFF);
+            result[2] = static_cast<char>((value >> 8) & 0xFF);
+            result[3] = static_cast<char>(value & 0xFF);
+        } else {
+            result[0] = static_cast<char>(value & 0xFF);
+            result[1] = static_cast<char>((value >> 8) & 0xFF);
+            result[2] = static_cast<char>((value >> 16) & 0xFF);
+            result[3] = static_cast<char>((value >> 24) & 0xFF);
+        }
+        return std::string(result.constData(), result.size());
+    });
+    
+    // 计算平均值
+    mathEx.set_function("average", [](sol::table values) -> double {
+        double sum = 0;
+        int count = 0;
+        for (auto& pair : values) {
+            if (pair.second.is<double>()) {
+                sum += pair.second.as<double>();
+                count++;
+            }
+        }
+        return count > 0 ? sum / count : 0;
+    });
+    
+    // 计算标准差
+    mathEx.set_function("stddev", [this](sol::table values) -> double {
+        double sum = 0, sumSq = 0;
+        int count = 0;
+        for (auto& pair : values) {
+            if (pair.second.is<double>()) {
+                double val = pair.second.as<double>();
+                sum += val;
+                sumSq += val * val;
+                count++;
+            }
+        }
+        if (count < 2) return 0;
+        double mean = sum / count;
+        return sqrt(sumSq / count - mean * mean);
+    });
+    
+    DS_LOG_DEBUG("Math API registered");
 }
 
 bool LuaScriptEngine::loadScript(const QString& filePath)

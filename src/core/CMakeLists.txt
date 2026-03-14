@@ -5,7 +5,14 @@ set(CORE_SOURCES
     devicemanager/device.cpp
     devicemanager/devicemanager.cpp
     datacenter/datastore.cpp
+    datacenter/datarecorder.cpp
+    datacenter/dataplayer.cpp
     scriptengine/luascriptengine.cpp
+    protocol/checksum.cpp
+    protocol/protocolparser.cpp
+    protocol/protocolengine.cpp
+    project/project.cpp
+    project/workspace.cpp
 )
 
 # 头文件
@@ -16,7 +23,15 @@ set(CORE_HEADERS
     devicemanager/devicemanager.h
     datacenter/idatacenter.h
     datacenter/datastore.h
+    datacenter/datarecorder.h
+    datacenter/dataplayer.h
     scriptengine/luascriptengine.h
+    protocol/protocoldefinition.h
+    protocol/checksum.h
+    protocol/protocolparser.h
+    protocol/protocolengine.h
+    project/project.h
+    project/workspace.h
 )
 
 # 创建静态库

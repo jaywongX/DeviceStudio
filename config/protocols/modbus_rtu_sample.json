@@ -1,0 +1,67 @@
+{
+    "protocol_name": "Modbus_RTU_Sample",
+    "protocol_version": "1.0",
+    "description": "示例Modbus RTU协议定义",
+    
+    "frame_header": "01",
+    "frame_tail": "",
+    "min_length": 6,
+    "max_length": 256,
+    
+    "length_field": {
+        "offset": 2,
+        "size": 1,
+        "adjust": 5
+    },
+    
+    "checksum": {
+        "enabled": true,
+        "type": "crc16_modbus",
+        "start_offset": 0,
+        "end_offset": -1,
+        "checksum_offset": -1,
+        "checksum_length": 2,
+        "range": "all"
+    },
+    
+    "fields": [
+        {
+            "name": "address",
+            "display_name": "设备地址",
+            "offset": 0,
+            "length": 1,
+            "type": "uint8"
+        },
+        {
+            "name": "function",
+            "display_name": "功能码",
+            "offset": 1,
+            "length": 1,
+            "type": "uint8",
+            "value_map": {
+                "1": "读线圈",
+                "2": "读离散输入",
+                "3": "读保持寄存器",
+                "4": "读输入寄存器",
+                "5": "写单个线圈",
+                "6": "写单个寄存器",
+                "15": "写多个线圈",
+                "16": "写多个寄存器"
+            }
+        },
+        {
+            "name": "length",
+            "display_name": "数据长度",
+            "offset": 2,
+            "length": 1,
+            "type": "uint8"
+        },
+        {
+            "name": "data",
+            "display_name": "数据区",
+            "offset": 3,
+            "length": 2,
+            "type": "bytes"
+        }
+    ]
+}

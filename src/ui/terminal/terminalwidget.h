@@ -15,6 +15,8 @@
 #include <QSpinBox>
 #include <QLabel>
 #include <QByteArray>
+#include <QTimer>
+#include <QFile>
 
 namespace DeviceStudio {
 
@@ -29,7 +31,7 @@ class TerminalWidget : public QWidget
 
 public:
     explicit TerminalWidget(QWidget* parent = nullptr);
-    ~TerminalWidget() override = default;
+    ~TerminalWidget() override;
     
     /**
      * @brief 添加接收数据
@@ -65,6 +67,16 @@ signals:
      * @brief 数据接收信号
      */
     void dataReceived(const QByteArray& data);
+    
+    /**
+     * @brief 文件发送进度信号
+     */
+    void fileSendProgress(qint64 sent, qint64 total);
+    
+    /**
+     * @brief 文件发送完成信号
+     */
+    void fileSendCompleted();
 
 private slots:
     /**
@@ -91,6 +103,41 @@ private slots:
      * @brief 自动发送状态改变
      */
     void onAutoSendChanged(bool enabled);
+    
+    /**
+     * @brief 自动发送定时器触发
+     */
+    void onAutoSendTimeout();
+    
+    /**
+     * @brief 自动发送间隔改变
+     */
+    void onAutoSendIntervalChanged(int interval);
+    
+    /**
+     * @brief 高亮设置改变
+     */
+    void onHighlightChanged(bool enabled);
+    
+    /**
+     * @brief 选择发送文件
+     */
+    void onSelectFile();
+    
+    /**
+     * @brief 发送文件
+     */
+    void onSendFile();
+    
+    /**
+     * @brief 文件发送定时器触发
+     */
+    void onFileSendTimeout();
+    
+    /**
+     * @brief 取消文件发送
+     */
+    void onCancelFileSend();
 
 private:
     /**
@@ -112,6 +159,16 @@ private:
      * @brief 更新统计信息
      */
     void updateStatistics();
+    
+    /**
+     * @brief 应用高亮
+     */
+    QString applyHighlight(const QString& text) const;
+    
+    /**
+     * @brief 更新文件发送进度显示
+     */
+    void updateFileSendProgress();
 
 private:
     // 接收区
@@ -128,6 +185,29 @@ private:
     // 统计
     qint64 totalReceivedBytes_ = 0;
     qint64 totalSentBytes_ = 0;
+    
+    // 自动发送
+    QTimer* autoSendTimer_ = nullptr;
+    
+    // 高亮设置
+    QCheckBox* highlightCheckBox_ = nullptr;
+    QLineEdit* highlightPatternEdit_ = nullptr;
+    QStringList highlightPatterns_;
+    
+    // 文件发送
+    QPushButton* selectFileBtn_ = nullptr;
+    QPushButton* sendFileBtn_ = nullptr;
+    QPushButton* cancelFileBtn_ = nullptr;
+    QLineEdit* filePathEdit_ = nullptr;
+    QSpinBox* fileChunkSizeSpinBox_ = nullptr;
+    QLabel* fileProgressLabel_ = nullptr;
+    QTimer* fileSendTimer_ = nullptr;
+    
+    QFile* currentFile_ = nullptr;
+    QString currentFilePath_;
+    qint64 fileTotalSize_ = 0;
+    qint64 fileSentSize_ = 0;
+    bool fileSending_ = false;
 };
 
 } // namespace DeviceStudio

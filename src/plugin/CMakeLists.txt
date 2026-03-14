@@ -35,3 +35,6 @@ target_link_libraries(plugin PUBLIC
 target_include_directories(plugin PUBLIC
     ${CMAKE_SOURCE_DIR}/src/plugin
 )
+
+# 添加示例插件子目录
+add_subdirectory(examples)

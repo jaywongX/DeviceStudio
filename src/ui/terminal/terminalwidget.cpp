@@ -15,6 +15,8 @@
 #include <QFileDialog>
 #include <QDateTime>
 #include <QTimer>
+#include <QProgressBar>
+#include <QMessageBox>
 
 namespace DeviceStudio {
 
@@ -24,10 +26,27 @@ TerminalWidget::TerminalWidget(QWidget* parent)
     setupUi();
 }
 
+TerminalWidget::~TerminalWidget()
+{
+    if (currentFile_) {
+        currentFile_->close();
+        delete currentFile_;
+        currentFile_ = nullptr;
+    }
+    if (fileSendTimer_) {
+        fileSendTimer_->stop();
+    }
+}
+
 void TerminalWidget::appendReceivedData(const QByteArray& data, bool isHex)
 {
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
     QString displayData = isHex ? formatHex(data) : QString::fromUtf8(data);
+    
+    // 应用高亮
+    if (highlightCheckBox_ && highlightCheckBox_->isChecked()) {
+        displayData = applyHighlight(displayData);
+    }
     
     receiveTextEdit_->append(QString("[%1] RX: %2").arg(timestamp, displayData));
     
@@ -41,6 +60,11 @@ void TerminalWidget::appendSentData(const QByteArray& data, bool isHex)
 {
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
     QString displayData = isHex ? formatHex(data) : QString::fromUtf8(data);
+    
+    // 应用高亮
+    if (highlightCheckBox_ && highlightCheckBox_->isChecked()) {
+        displayData = applyHighlight(displayData);
+    }
     
     receiveTextEdit_->append(QString("[%1] TX: %2").arg(timestamp, displayData));
     
@@ -126,12 +150,192 @@ void TerminalWidget::onAutoSendChanged(bool enabled)
     autoSendIntervalSpinBox_->setEnabled(enabled);
     
     if (enabled) {
-        // TODO: 启动自动发送定时器
-        DS_LOG_INFO("Auto send enabled");
+        // 启动自动发送定时器
+        if (!autoSendTimer_) {
+            autoSendTimer_ = new QTimer(this);
+            connect(autoSendTimer_, &QTimer::timeout, this, &TerminalWidget::onAutoSendTimeout);
+        }
+        autoSendTimer_->start(autoSendIntervalSpinBox_->value());
+        DS_LOG_INFO("Auto send enabled with interval " + std::to_string(autoSendIntervalSpinBox_->value()) + "ms");
     } else {
-        // TODO: 停止自动发送定时器
+        // 停止自动发送定时器
+        if (autoSendTimer_) {
+            autoSendTimer_->stop();
+        }
         DS_LOG_INFO("Auto send disabled");
     }
+}
+
+void TerminalWidget::onAutoSendTimeout()
+{
+    // 检查是否有数据要发送
+    QString text = sendLineEdit_->text().trimmed();
+    if (text.isEmpty()) {
+        return;
+    }
+    
+    // 调用发送函数
+    onSend();
+}
+
+void TerminalWidget::onAutoSendIntervalChanged(int interval)
+{
+    // 更新定时器间隔
+    if (autoSendTimer_ && autoSendTimer_->isActive()) {
+        autoSendTimer_->setInterval(interval);
+        DS_LOG_DEBUG("Auto send interval changed to " + std::to_string(interval) + "ms");
+    }
+}
+
+void TerminalWidget::onHighlightChanged(bool enabled)
+{
+    highlightPatternEdit_->setEnabled(enabled);
+    if (enabled) {
+        QString patterns = highlightPatternEdit_->text();
+        highlightPatterns_ = patterns.split(',', Qt::SkipEmptyParts);
+        for (QString& p : highlightPatterns_) {
+            p = p.trimmed();
+        }
+    } else {
+        highlightPatterns_.clear();
+    }
+    DS_LOG_DEBUG("Highlight " + std::string(enabled ? "enabled" : "disabled"));
+}
+
+QString TerminalWidget::applyHighlight(const QString& text) const
+{
+    QString result = text;
+    
+    // 使用HTML格式高亮
+    for (const QString& pattern : highlightPatterns_) {
+        if (!pattern.isEmpty()) {
+            result.replace(pattern, QString("<span style='color: red; font-weight: bold;'>%1</span>").arg(pattern),
+                          Qt::CaseInsensitive);
+        }
+    }
+    
+    return result;
+}
+
+void TerminalWidget::onSelectFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("选择要发送的文件"),
+        QString(), tr("所有文件 (*.*);;二进制文件 (*.bin *.dat);;文本文件 (*.txt)"));
+    
+    if (!fileName.isEmpty()) {
+        currentFilePath_ = fileName;
+        filePathEdit_->setText(fileName);
+        sendFileBtn_->setEnabled(true);
+        DS_LOG_INFO("Selected file: " + fileName.toStdString());
+    }
+}
+
+void TerminalWidget::onSendFile()
+{
+    if (currentFilePath_.isEmpty()) {
+        QMessageBox::warning(this, tr("错误"), tr("请先选择要发送的文件"));
+        return;
+    }
+    
+    if (fileSending_) {
+        return;  // 已经在发送中
+    }
+    
+    // 打开文件
+    if (currentFile_) {
+        currentFile_->close();
+        delete currentFile_;
+    }
+    
+    currentFile_ = new QFile(currentFilePath_);
+    if (!currentFile_->open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("错误"), tr("无法打开文件: %1").arg(currentFilePath_));
+        delete currentFile_;
+        currentFile_ = nullptr;
+        return;
+    }
+    
+    fileTotalSize_ = currentFile_->size();
+    fileSentSize_ = 0;
+    fileSending_ = true;
+    
+    // 更新UI
+    sendFileBtn_->setEnabled(false);
+    selectFileBtn_->setEnabled(false);
+    cancelFileBtn_->setEnabled(true);
+    fileProgressLabel_->setText(tr("发送中: 0 / %1 字节").arg(fileTotalSize_));
+    
+    // 创建定时器
+    if (!fileSendTimer_) {
+        fileSendTimer_ = new QTimer(this);
+        connect(fileSendTimer_, &QTimer::timeout, this, &TerminalWidget::onFileSendTimeout);
+    }
+    
+    fileSendTimer_->start(10);  // 10ms间隔发送数据块
+    DS_LOG_INFO("Starting file send: " + currentFilePath_.toStdString());
+}
+
+void TerminalWidget::onFileSendTimeout()
+{
+    if (!currentFile_ || !fileSending_) {
+        fileSendTimer_->stop();
+        return;
+    }
+    
+    // 读取一块数据
+    int chunkSize = fileChunkSizeSpinBox_->value();
+    QByteArray chunk = currentFile_->read(chunkSize);
+    
+    if (chunk.isEmpty()) {
+        // 文件发送完成
+        onCancelFileSend();
+        emit fileSendCompleted();
+        DS_LOG_INFO("File send completed: " + std::to_string(fileSentSize_) + " bytes");
+        return;
+    }
+    
+    // 发送数据
+    emit dataSendRequested(chunk);
+    fileSentSize_ += chunk.size();
+    
+    // 显示进度
+    updateFileSendProgress();
+    emit fileSendProgress(fileSentSize_, fileTotalSize_);
+}
+
+void TerminalWidget::onCancelFileSend()
+{
+    if (fileSendTimer_) {
+        fileSendTimer_->stop();
+    }
+    
+    if (currentFile_) {
+        currentFile_->close();
+        delete currentFile_;
+        currentFile_ = nullptr;
+    }
+    
+    fileSending_ = false;
+    
+    // 恢复UI
+    sendFileBtn_->setEnabled(true);
+    selectFileBtn_->setEnabled(true);
+    cancelFileBtn_->setEnabled(false);
+    
+    if (fileSentSize_ >= fileTotalSize_) {
+        fileProgressLabel_->setText(tr("发送完成: %1 字节").arg(fileTotalSize_));
+    } else {
+        fileProgressLabel_->setText(tr("已取消: %1 / %2 字节").arg(fileSentSize_).arg(fileTotalSize_));
+    }
+    
+    DS_LOG_INFO("File send stopped");
+}
+
+void TerminalWidget::updateFileSendProgress()
+{
+    double percent = fileTotalSize_ > 0 ? (fileSentSize_ * 100.0 / fileTotalSize_) : 0;
+    fileProgressLabel_->setText(tr("发送中: %1 / %2 字节 (%3%)")
+        .arg(fileSentSize_).arg(fileTotalSize_).arg(percent, 0, 'f', 1));
 }
 
 void TerminalWidget::setupUi()
@@ -153,6 +357,17 @@ void TerminalWidget::setupUi()
     hexReceiveCheckBox_ = new QCheckBox(tr("HEX显示"), this);
     hexReceiveCheckBox_->setChecked(true);
     receiveButtonLayout->addWidget(hexReceiveCheckBox_);
+    
+    highlightCheckBox_ = new QCheckBox(tr("高亮"), this);
+    highlightCheckBox_->setChecked(false);
+    connect(highlightCheckBox_, &QCheckBox::toggled, this, &TerminalWidget::onHighlightChanged);
+    receiveButtonLayout->addWidget(highlightCheckBox_);
+    
+    highlightPatternEdit_ = new QLineEdit(this);
+    highlightPatternEdit_->setPlaceholderText(tr("高亮关键字(逗号分隔)"));
+    highlightPatternEdit_->setEnabled(false);
+    highlightPatternEdit_->setMaximumWidth(150);
+    receiveButtonLayout->addWidget(highlightPatternEdit_);
     
     receiveButtonLayout->addStretch();
     
@@ -198,6 +413,8 @@ void TerminalWidget::setupUi()
     autoSendIntervalSpinBox_->setValue(1000);
     autoSendIntervalSpinBox_->setSuffix(tr(" ms"));
     autoSendIntervalSpinBox_->setEnabled(false);
+    connect(autoSendIntervalSpinBox_, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &TerminalWidget::onAutoSendIntervalChanged);
     sendOptionLayout->addWidget(autoSendIntervalSpinBox_);
     
     sendOptionLayout->addStretch();
@@ -213,6 +430,54 @@ void TerminalWidget::setupUi()
     
     sendLayout->addLayout(sendOptionLayout);
     mainLayout->addWidget(sendGroup);
+    
+    // ========== 文件发送区 ==========
+    QGroupBox* fileSendGroup = new QGroupBox(tr("文件发送"), this);
+    QVBoxLayout* fileSendLayout = new QVBoxLayout(fileSendGroup);
+    
+    // 文件选择行
+    QHBoxLayout* fileSelectLayout = new QHBoxLayout();
+    
+    selectFileBtn_ = new QPushButton(tr("选择文件"), this);
+    connect(selectFileBtn_, &QPushButton::clicked, this, &TerminalWidget::onSelectFile);
+    fileSelectLayout->addWidget(selectFileBtn_);
+    
+    filePathEdit_ = new QLineEdit(this);
+    filePathEdit_->setReadOnly(true);
+    filePathEdit_->setPlaceholderText(tr("未选择文件"));
+    fileSelectLayout->addWidget(filePathEdit_);
+    
+    fileSendLayout->addLayout(fileSelectLayout);
+    
+    // 文件发送选项行
+    QHBoxLayout* fileOptionLayout = new QHBoxLayout();
+    
+    fileOptionLayout->addWidget(new QLabel(tr("块大小:"), this));
+    fileChunkSizeSpinBox_ = new QSpinBox(this);
+    fileChunkSizeSpinBox_->setRange(1, 4096);
+    fileChunkSizeSpinBox_->setValue(512);
+    fileChunkSizeSpinBox_->setSuffix(tr(" 字节"));
+    fileOptionLayout->addWidget(fileChunkSizeSpinBox_);
+    
+    fileOptionLayout->addStretch();
+    
+    sendFileBtn_ = new QPushButton(tr("发送文件"), this);
+    sendFileBtn_->setEnabled(false);
+    connect(sendFileBtn_, &QPushButton::clicked, this, &TerminalWidget::onSendFile);
+    fileOptionLayout->addWidget(sendFileBtn_);
+    
+    cancelFileBtn_ = new QPushButton(tr("取消"), this);
+    cancelFileBtn_->setEnabled(false);
+    connect(cancelFileBtn_, &QPushButton::clicked, this, &TerminalWidget::onCancelFileSend);
+    fileOptionLayout->addWidget(cancelFileBtn_);
+    
+    fileSendLayout->addLayout(fileOptionLayout);
+    
+    // 进度显示
+    fileProgressLabel_ = new QLabel(tr("就绪"), this);
+    fileSendLayout->addWidget(fileProgressLabel_);
+    
+    mainLayout->addWidget(fileSendGroup);
 }
 
 QString TerminalWidget::formatHex(const QByteArray& data) const

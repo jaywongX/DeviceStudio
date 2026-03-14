@@ -8,6 +8,8 @@ set(UI_SOURCES
     scripteditor/scripteditorwidget.cpp
     dialogs/deviceconfigdialog.cpp
     monitor/datamonitorpanel.cpp
+    thememanager.cpp
+    shortcutmanager.cpp
 )
 
 # 头文件
@@ -18,6 +20,8 @@ set(UI_HEADERS
     scripteditor/scripteditorwidget.h
     dialogs/deviceconfigdialog.h
     monitor/datamonitorpanel.h
+    thememanager.h
+    shortcutmanager.h
 )
 
 # 创建静态库

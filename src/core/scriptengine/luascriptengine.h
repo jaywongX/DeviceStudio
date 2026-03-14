@@ -10,8 +10,10 @@
 #include <QObject>
 #include <QString>
 #include <QVariant>
+#include <QTimer>
 #include <sol/sol.hpp>
 #include <memory>
+#include <functional>
 
 namespace DeviceStudio {
 
@@ -26,6 +28,15 @@ struct LuaEngineConfig {
     bool enableOS = false;          // 是否允许OS操作（危险）
     int instructionLimit = 1000000; // 指令限制（防止死循环）
     QString scriptPath = "./scripts"; // 脚本路径
+};
+
+/**
+ * @brief 定时器信息
+ */
+struct LuaTimer {
+    int id;
+    std::function<void()> callback;
+    bool singleShot;
 };
 
 /**
@@ -111,6 +122,11 @@ public:
      * @brief 清除错误
      */
     void clearError();
+    
+    /**
+     * @brief 停止所有定时器
+     */
+    void stopAllTimers();
 
 signals:
     /**
@@ -127,6 +143,11 @@ signals:
      * @brief 打印输出信号
      */
     void printOutput(const QString& message);
+    
+    /**
+     * @brief 数据发送请求信号
+     */
+    void sendDataRequested(const QString& deviceName, const QByteArray& data);
 
 private:
     void initializeLua();
@@ -134,12 +155,21 @@ private:
     void registerDeviceAPI();
     void registerDataAPI();
     void registerUtilityAPI();
+    void registerProtocolAPI();
+    void registerFileAPI();
+    void registerTimerAPI();
+    void registerStringAPI();
+    void registerMathAPI();
     
     LuaEngineConfig config_;
     std::unique_ptr<sol::state> lua_;
     DeviceManager* deviceManager_ = nullptr;
     DataStore* dataStore_ = nullptr;
     QString lastError_;
+    
+    // 定时器管理
+    QMap<int, QTimer*> timers_;
+    int nextTimerId_ = 1;
 };
 
 } // namespace DeviceStudio
