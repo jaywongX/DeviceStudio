@@ -105,13 +105,37 @@ void MainWindow::setupMenuBar()
     
     // ========== 编辑菜单 ==========
     QMenu* editMenu = menuBar()->addMenu(tr("&编辑"));
+    editMenu->addAction(tr("剪切(&X)"), this, [](){}, QKeySequence::Cut);
+    editMenu->addAction(tr("复制(&C)"), this, [](){}, QKeySequence::Copy);
+    editMenu->addAction(tr("粘贴(&V)"), this, [](){}, QKeySequence::Paste);
     
-    // TODO: 添加编辑菜单项
+    // ========== 设备菜单 ==========
+    QMenu* deviceMenu = menuBar()->addMenu(tr("&设备"));
+    
+    addDeviceAction_ = new QAction(QIcon(":/icons/add_device.png"), tr("添加设备(&A)"), this);
+    addDeviceAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_A));
+    addDeviceAction_->setStatusTip(tr("添加新设备"));
+    connect(addDeviceAction_, &QAction::triggered, this, &MainWindow::onAddDevice);
+    deviceMenu->addAction(addDeviceAction_);
+    
+    // ========== 脚本菜单 ==========
+    QMenu* scriptMenu = menuBar()->addMenu(tr("&脚本"));
+    
+    runScriptAction_ = new QAction(QIcon(":/icons/run.png"), tr("运行脚本(&R)"), this);
+    runScriptAction_->setShortcut(QKeySequence(Qt::Key_F5));
+    runScriptAction_->setStatusTip(tr("运行当前脚本"));
+    connect(runScriptAction_, &QAction::triggered, this, &MainWindow::onRunScript);
+    scriptMenu->addAction(runScriptAction_);
+    
+    stopScriptAction_ = new QAction(QIcon(":/icons/stop.png"), tr("停止脚本(&S)"), this);
+    stopScriptAction_->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F5));
+    stopScriptAction_->setStatusTip(tr("停止当前运行的脚本"));
+    connect(stopScriptAction_, &QAction::triggered, this, &MainWindow::onStopScript);
+    scriptMenu->addAction(stopScriptAction_);
     
     // ========== 视图菜单 ==========
     QMenu* viewMenu = menuBar()->addMenu(tr("&视图"));
-    
-    // TODO: 添加视图菜单项
+    // 视图菜单会自动填充停靠窗口的切换动作
     
     // ========== 工具菜单 ==========
     QMenu* toolsMenu = menuBar()->addMenu(tr("&工具"));
@@ -177,13 +201,23 @@ void MainWindow::setupCentralWidget()
     
     // 数据终端
     terminalWidget_ = new TerminalWidget(this);
-    centralTabWidget_->addTab(terminalWidget_, tr("数据终端"));
+    centralTabWidget_->addTab(terminalWidget_, QIcon(":/icons/terminal.png"), tr("数据终端"));
     
-    // TODO: 添加更多 Tab 页
-    // centralTabWidget_->addTab(protocolWidget_, tr("协议解析"));
-    // centralTabWidget_->addTab(chartWidget_, tr("曲线图表"));
-    // centralTabWidget_->addTab(dashboardWidget_, tr("仪表盘"));
-    // centralTabWidget_->addTab(scriptEditor_, tr("脚本编辑"));
+    // 图表组件
+    chartWidget_ = new ChartWidget(this);
+    centralTabWidget_->addTab(chartWidget_, QIcon(":/icons/chart.png"), tr("曲线图表"));
+    
+    // 仪表盘组件
+    gaugeWidget_ = new GaugeWidget(this);
+    centralTabWidget_->addTab(gaugeWidget_, QIcon(":/icons/gauge.png"), tr("仪表盘"));
+    
+    // 脚本编辑器
+    scriptEditor_ = new ScriptEditorWidget(this);
+    centralTabWidget_->addTab(scriptEditor_, QIcon(":/icons/script.png"), tr("脚本编辑"));
+    
+    // 数据监控面板
+    dataMonitorPanel_ = new DataMonitorPanel(this);
+    centralTabWidget_->addTab(dataMonitorPanel_, QIcon(":/icons/monitor.png"), tr("数据监控"));
     
     setCentralWidget(centralTabWidget_);
 }
@@ -265,6 +299,44 @@ void MainWindow::onDeviceConnectionChanged(bool connected)
     QString status = connected ? tr("设备已连接") : tr("设备已断开");
     statusBar()->showMessage(status, 3000);
     DS_LOG_INFO("Device connection changed: " + status.toStdString());
+}
+
+void MainWindow::onAddDevice()
+{
+    DS_LOG_INFO("Add device requested");
+    statusBar()->showMessage(tr("添加设备"), 2000);
+    // TODO: 打开设备配置对话框
+}
+
+void MainWindow::onRunScript()
+{
+    DS_LOG_INFO("Run script requested");
+    statusBar()->showMessage(tr("运行脚本"), 2000);
+    // TODO: 运行脚本
+}
+
+void MainWindow::onStopScript()
+{
+    DS_LOG_INFO("Stop script requested");
+    statusBar()->showMessage(tr("停止脚本"), 2000);
+    // TODO: 停止脚本
+}
+
+void MainWindow::onDataReceived(const QByteArray& data)
+{
+    // 转发数据到各个组件
+    if (chartWidget_) {
+        // TODO: 更新图表数据
+    }
+    
+    if (dataMonitorPanel_) {
+        // TODO: 更新数据监控面板
+    }
+}
+
+void MainWindow::updateStatusBar()
+{
+    // TODO: 更新状态栏信息
 }
 
 } // namespace DeviceStudio

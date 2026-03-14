@@ -20,6 +20,11 @@ namespace DeviceStudio {
 // 前向声明
 class DevicePanel;
 class TerminalWidget;
+class ChartWidget;
+class GaugeWidget;
+class ScriptEditorWidget;
+class DataMonitorPanel;
+class DeviceManager;
 
 /**
  * @brief 主窗口类
@@ -90,6 +95,11 @@ private:
      * @brief 保存窗口设置
      */
     void saveSettings();
+    
+    /**
+     * @brief 连接信号槽
+     */
+    void connectSignals();
 
 private slots:
     /**
@@ -121,12 +131,44 @@ private slots:
      * @brief 设备连接状态改变
      */
     void onDeviceConnectionChanged(bool connected);
+    
+    /**
+     * @brief 添加设备
+     */
+    void onAddDevice();
+    
+    /**
+     * @brief 运行脚本
+     */
+    void onRunScript();
+    
+    /**
+     * @brief 停止脚本
+     */
+    void onStopScript();
+    
+    /**
+     * @brief 数据接收
+     */
+    void onDataReceived(const QByteArray& data);
+    
+    /**
+     * @brief 更新状态栏
+     */
+    void updateStatusBar();
 
 private:
+    // 核心组件
+    std::shared_ptr<DeviceManager> deviceManager_;
+    
     // UI 组件
     QTabWidget* centralTabWidget_ = nullptr;
     DevicePanel* devicePanel_ = nullptr;
     TerminalWidget* terminalWidget_ = nullptr;
+    ChartWidget* chartWidget_ = nullptr;
+    GaugeWidget* gaugeWidget_ = nullptr;
+    ScriptEditorWidget* scriptEditor_ = nullptr;
+    DataMonitorPanel* dataMonitorPanel_ = nullptr;
     
     // 菜单动作
     QAction* newAction_ = nullptr;
@@ -136,6 +178,9 @@ private:
     QAction* settingsAction_ = nullptr;
     QAction* aboutAction_ = nullptr;
     QAction* aboutQtAction_ = nullptr;
+    QAction* addDeviceAction_ = nullptr;
+    QAction* runScriptAction_ = nullptr;
+    QAction* stopScriptAction_ = nullptr;
 };
 
 } // namespace DeviceStudio

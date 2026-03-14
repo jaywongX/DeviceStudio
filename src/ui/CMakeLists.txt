@@ -5,7 +5,9 @@ set(UI_SOURCES
     mainwindow/mainwindow.cpp
     devicepanel/devicepanel.cpp
     terminal/terminalwidget.cpp
-    scripteditor/scripteditor.cpp
+    scripteditor/scripteditorwidget.cpp
+    dialogs/deviceconfigdialog.cpp
+    monitor/datamonitorpanel.cpp
 )
 
 # 头文件
@@ -13,19 +15,15 @@ set(UI_HEADERS
     mainwindow/mainwindow.h
     devicepanel/devicepanel.h
     terminal/terminalwidget.h
-    scripteditor/scripteditor.h
-)
-
-# UI 文件 (Qt Designer)
-set(UI_FORMS
-    mainwindow/mainwindow.ui
+    scripteditor/scripteditorwidget.h
+    dialogs/deviceconfigdialog.h
+    monitor/datamonitorpanel.h
 )
 
 # 创建静态库
 add_library(ui STATIC
     ${UI_SOURCES}
     ${UI_HEADERS}
-    ${UI_FORMS}
 )
 
 # 包含目录
@@ -43,12 +41,8 @@ target_link_libraries(ui PUBLIC
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::SerialPort
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::SerialBus
 )
-
-# 可选 Qt Charts
-if(TARGET Qt${QT_VERSION_MAJOR}::Charts)
-    target_link_libraries(ui PUBLIC Qt${QT_VERSION_MAJOR}::Charts)
-endif()
 
 # 导出头文件
 target_include_directories(ui PUBLIC
