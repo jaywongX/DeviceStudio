@@ -8,6 +8,8 @@ set(CORE_SOURCES
     datacenter/datarecorder.cpp
     datacenter/dataplayer.cpp
     scriptengine/luascriptengine.cpp
+    scriptengine/scriptparser.cpp
+    scriptengine/scriptexecutor.cpp
     protocol/checksum.cpp
     protocol/protocolparser.cpp
     protocol/protocolengine.cpp
@@ -26,6 +28,9 @@ set(CORE_HEADERS
     datacenter/datarecorder.h
     datacenter/dataplayer.h
     scriptengine/luascriptengine.h
+    scriptengine/scriptcommands.h
+    scriptengine/scriptparser.h
+    scriptengine/scriptexecutor.h
     protocol/protocoldefinition.h
     protocol/checksum.h
     protocol/protocolparser.h
