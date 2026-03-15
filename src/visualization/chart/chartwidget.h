@@ -1,15 +1,17 @@
 /**
  * @file chartwidget.h
- * @brief 图表组件
+ * @brief 图表组件 - 支持多通道显示、缩放平移、数据导出
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2026-03-15
  */
 
 #pragma once
 
 #include <QWidget>
 #include <QVector>
+#include <QMouseEvent>
 #include "qcustomplot.h"
+#include "channelmanager.h"
 
 namespace DeviceStudio {
 
@@ -36,10 +38,21 @@ struct ChartConfig {
     bool antialiased = true;
     int maxPoints = 1000;           // 最大数据点数（实时图）
     double refreshRate = 30.0;      // 刷新率（Hz）
+    bool enableZoom = true;         // 启用缩放
+    bool enablePan = true;          // 启用平移
 };
 
 /**
  * @brief 图表组件类
+ * 
+ * 支持功能：
+ * - 多通道曲线显示（最多16通道）
+ * - 通道颜色自定义
+ * - 鼠标滚轮缩放
+ * - 拖拽平移
+ * - 双击复位
+ * - 数据导出CSV
+ * - 截图保存
  */
 class ChartWidget : public QWidget
 {
@@ -68,7 +81,41 @@ public:
      */
     void setAxisLabels(const QString& xLabel, const QString& yLabel);
     
-    // ========== 数据操作 ==========
+    // ========== 通道管理 ==========
+    
+    /**
+     * @brief 获取通道管理器
+     */
+    ChannelManager* channelManager() { return channelManager_; }
+    const ChannelManager* channelManager() const { return channelManager_; }
+    
+    /**
+     * @brief 添加通道
+     */
+    int addChannel(const QString& name, const QColor& color = QColor());
+    
+    /**
+     * @brief 移除通道
+     */
+    void removeChannel(int id);
+    
+    /**
+     * @brief 设置通道颜色
+     */
+    void setChannelColor(int id, const QColor& color);
+    
+    /**
+     * @brief 设置通道可见性
+     */
+    void setChannelVisible(int id, bool visible);
+    
+    /**
+     * @brief 添加通道数据点
+     */
+    void addChannelData(int id, double x, double y);
+    void addChannelData(int id, double y);
+    
+    // ========== 曲线操作（兼容旧接口）==========
     
     /**
      * @brief 添加曲线
@@ -135,10 +182,36 @@ public:
      */
     void setGridVisible(bool visible);
     
+    // ========== 缩放/平移控制 ==========
+    
+    /**
+     * @brief 复位视图（双击效果）
+     */
+    void resetView();
+    
+    /**
+     * @brief 启用/禁用缩放
+     */
+    void setZoomEnabled(bool enabled);
+    bool isZoomEnabled() const { return config_.enableZoom; }
+    
+    /**
+     * @brief 启用/禁用平移
+     */
+    void setPanEnabled(bool enabled);
+    bool isPanEnabled() const { return config_.enablePan; }
+    
+    // ========== 导出功能 ==========
+    
     /**
      * @brief 导出为图片
      */
     bool exportToImage(const QString& filePath, int width = 800, int height = 600);
+    
+    /**
+     * @brief 导出数据为CSV
+     */
+    bool exportToCSV(const QString& filePath);
     
     /**
      * @brief 获取QCustomPlot对象
@@ -147,15 +220,31 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+
+private slots:
+    void onChannelAdded(int id);
+    void onChannelRemoved(int id);
+    void onChannelConfigChanged(int id);
+    void onChannelDataUpdated(int id);
 
 private:
     void setupUI();
     void setupPlot();
+    void connectChannelManager();
+    void updateGraphFromChannel(int id);
     
     QCustomPlot* plot_ = nullptr;
+    ChannelManager* channelManager_ = nullptr;
     ChartConfig config_;
     QVector<double> xData_;     // 用于实时图
     int currentXIndex_ = 0;     // 当前X索引
+    QMap<int, int> channelToGraphMap_;  // 通道ID到图表索引的映射
+    
+    // 保存原始范围用于复位
+    double originalXMin_ = 0, originalXMax_ = 100;
+    double originalYMin_ = 0, originalYMax_ = 100;
 };
 
 } // namespace DeviceStudio

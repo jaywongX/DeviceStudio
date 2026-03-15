@@ -3,13 +3,21 @@
 # 源文件
 set(VISUALIZATION_SOURCES
     chart/chartwidget.cpp
+    chart/channelmanager.cpp
     gauge/gaugewidget.cpp
+    gauge/bargauge.cpp
+    gauge/ledindicator.cpp
+    gauge/switchindicator.cpp
 )
 
 # 头文件
 set(VISUALIZATION_HEADERS
     chart/chartwidget.h
+    chart/channelmanager.h
     gauge/gaugewidget.h
+    gauge/bargauge.h
+    gauge/ledindicator.h
+    gauge/switchindicator.h
 )
 
 # 创建静态库
