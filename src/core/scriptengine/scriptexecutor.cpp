@@ -14,6 +14,7 @@
 #include <QEventLoop>
 #include <QTimer>
 #include <QCoreApplication>
+#include <QtConcurrent>
 
 namespace DeviceStudio {
 
@@ -120,7 +121,7 @@ ExecutionResult ScriptExecutor::execute()
         context_.currentLine = i;
         const ScriptCommand& cmd = commands_[i];
         
-        emit lineExecuting(cmd.lineNumber, cmd.rawLine);
+        emit lineExecuted(cmd.lineNumber, cmd.rawLine);
         
         ExecutionResult cmdResult = executeCommand(cmd, i);
         context_.executedLines++;
@@ -730,6 +731,46 @@ void ScriptExecutor::onDeviceConnected(const QString& deviceName)
 void ScriptExecutor::onDeviceDisconnected(const QString& deviceName)
 {
     emit logOutput(QString("设备已断开: %1").arg(deviceName));
+}
+
+void ScriptExecutor::executeNextLine()
+{
+    if (!isRunning_ || isPaused_ || context_.stopRequested) {
+        executionTimer_->stop();
+        if (context_.stopRequested) {
+            emit executionFinished(false, "执行已停止");
+        }
+        return;
+    }
+    
+    if (context_.currentLine >= commands_.size()) {
+        executionTimer_->stop();
+        isRunning_ = false;
+        emit executionFinished(true, "脚本执行完成");
+        return;
+    }
+    
+    const ScriptCommand& cmd = commands_[context_.currentLine];
+    emit lineExecuted(cmd.lineNumber, cmd.rawLine);
+    
+    int currentIndex = context_.currentLine;
+    ExecutionResult result = executeCommand(cmd, currentIndex);
+    context_.executedLines++;
+    
+    if (!result.success) {
+        executionTimer_->stop();
+        isRunning_ = false;
+        emit errorOccurred(result.message, cmd.lineNumber);
+        emit executionFinished(false, result.message);
+        return;
+    }
+    
+    // 处理跳转
+    if (result.executedLines > 0) {
+        context_.currentLine = result.executedLines - 1;
+    } else {
+        context_.currentLine++;
+    }
 }
 
 } // namespace DeviceStudio

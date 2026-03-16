@@ -73,14 +73,14 @@ public:
      * @param data 原始数据
      * @return 解析结果
      */
-    ParseResult parse(const QByteArray& data);
-    
+    ProtocolParseResult parse(const QByteArray& data);
+
     /**
      * @brief 在缓冲区中查找并解析帧
      * @param buffer 数据缓冲区(会被修改,已解析的数据会被移除)
      * @return 解析结果列表
      */
-    QList<ParseResult> parseFromBuffer(QByteArray& buffer);
+    QList<ProtocolParseResult> parseFromBuffer(QByteArray& buffer);
     
     /**
      * @brief 查找帧边界

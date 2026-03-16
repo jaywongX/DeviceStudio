@@ -41,6 +41,11 @@ public:
     
     QVariantMap getConfiguration() const override { return configuration_; }
     void setConfiguration(const QVariantMap& config) override;
+    
+    /**
+     * @brief 设置设备名称（公共接口）
+     */
+    void setName(const QString& name) { deviceName_ = name; }
 
 protected:
     void setDeviceId(const QString& id) { deviceId_ = id; }

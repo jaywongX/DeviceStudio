@@ -43,11 +43,11 @@ TcpClient::TcpClient(QObject* parent)
     socket_ = new QTcpSocket(this);
     reconnectTimer_ = new QTimer(this);
     
-    connect(socket_, &QTcpSocket::connected, this, &TcpClient::onConnected);
-    connect(socket_, &QTcpSocket::disconnected, this, &TcpClient::onDisconnected);
-    connect(socket_, &QTcpSocket::readyRead, this, &TcpClient::onReadyRead);
-    connect(socket_, &QTcpSocket::errorOccurred, this, &TcpClient::onError);
-    connect(reconnectTimer_, &QTimer::timeout, this, &TcpClient::onReconnectTimer);
+    QObject::connect(socket_, &QTcpSocket::connected, this, &TcpClient::onConnected);
+    QObject::connect(socket_, &QTcpSocket::disconnected, this, &TcpClient::onDisconnected);
+    QObject::connect(socket_, &QTcpSocket::readyRead, this, &TcpClient::onReadyRead);
+    QObject::connect(socket_, &QTcpSocket::errorOccurred, this, &TcpClient::onError);
+    QObject::connect(reconnectTimer_, &QTimer::timeout, this, &TcpClient::onReconnectTimer);
 }
 
 TcpClient::TcpClient(const QString& host, quint16 port, QObject* parent)

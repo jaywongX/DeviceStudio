@@ -53,59 +53,64 @@ public:
     void setPlotCallback(std::function<void(const QString&, double)> callback);
     
     // ========== 执行控制 ==========
-    
+
     /**
      * @brief 加载并验证脚本
      */
-    bool loadScript(const QString& script);
-    
+    ExecutionResult load(const QString& script);
+
     /**
      * @brief 加载脚本文件
      */
-    bool loadScriptFile(const QString& filePath);
-    
+    ExecutionResult loadFile(const QString& filePath);
+
     /**
-     * @brief 开始执行
+     * @brief 执行脚本（同步）
      */
-    void start();
-    
+    ExecutionResult execute();
+
+    /**
+     * @brief 执行脚本（异步）
+     */
+    void executeAsync();
+
     /**
      * @brief 暂停执行
      */
     void pause();
-    
+
     /**
      * @brief 继续执行
      */
     void resume();
-    
+
     /**
      * @brief 停止执行
      */
     void stop();
-    
+
     /**
      * @brief 是否正在执行
      */
-    bool isRunning() const { return isRunning_; }
-    
+    bool isRunning() const;
+
     /**
      * @brief 是否已暂停
      */
-    bool isPaused() const { return isPaused_; }
-    
+    bool isPaused() const;
+
     // ========== 状态查询 ==========
-    
+
     /**
      * @brief 获取当前行号
      */
     int currentLine() const { return context_.currentLine; }
-    
+
     /**
      * @brief 获取执行上下文
      */
-    const ScriptContext& context() const { return context_; }
-    
+    ScriptContext getContext() const;
+
     /**
      * @brief 获取最后的错误信息
      */
@@ -116,42 +121,57 @@ signals:
      * @brief 执行开始信号
      */
     void executionStarted();
-    
+
     /**
      * @brief 执行完成信号
      */
     void executionFinished(bool success, const QString& message);
-    
+
+    /**
+     * @brief 执行暂停信号
+     */
+    void executionPaused();
+
+    /**
+     * @brief 执行恢复信号
+     */
+    void executionResumed();
+
     /**
      * @brief 行执行信号
      */
     void lineExecuted(int lineNumber, const QString& command);
-    
+
     /**
      * @brief 日志输出信号
      */
     void logOutput(const QString& message);
-    
+
     /**
      * @brief 错误信号
      */
-    void errorOccurred(const QString& error);
-    
+    void errorOccurred(const QString& error, int lineNumber = -1);
+
+    /**
+     * @brief 数据发送请求信号
+     */
+    void sendDataRequested(const QString& deviceName, const QByteArray& data);
+
     /**
      * @brief 数据发送信号
      */
     void dataSent(const QByteArray& data);
-    
+
     /**
      * @brief 数据接收信号
      */
     void dataReceived(const QByteArray& data);
-    
+
     /**
      * @brief 设备连接信号
      */
     void deviceConnected(const QString& deviceName);
-    
+
     /**
      * @brief 设备断开信号
      */
@@ -162,16 +182,26 @@ private slots:
      * @brief 执行下一行命令
      */
     void executeNextLine();
-    
+
     /**
      * @brief 数据接收处理
      */
-    void onDataReceived(const QByteArray& data);
+    void onDataReceived(const QString& deviceName, const QByteArray& data);
+
+    /**
+     * @brief 设备连接处理
+     */
+    void onDeviceConnected(const QString& deviceName);
+
+    /**
+     * @brief 设备断开处理
+     */
+    void onDeviceDisconnected(const QString& deviceName);
 
 private:
     // ========== 命令执行 ==========
-    
-    ExecutionResult executeCommand(const ScriptCommand& cmd);
+
+    ExecutionResult executeCommand(const ScriptCommand& cmd, int& currentIndex);
     ExecutionResult executeConnect(const ScriptCommand& cmd);
     ExecutionResult executeDisconnect(const ScriptCommand& cmd);
     ExecutionResult executeSend(const ScriptCommand& cmd);
@@ -182,8 +212,8 @@ private:
     ExecutionResult executeIf(const ScriptCommand& cmd);
     ExecutionResult executeElse(const ScriptCommand& cmd);
     ExecutionResult executeEndIf(const ScriptCommand& cmd);
-    ExecutionResult executeFor(const ScriptCommand& cmd);
-    ExecutionResult executeEndFor(const ScriptCommand& cmd);
+    ExecutionResult executeFor(const ScriptCommand& cmd, int& currentIndex);
+    ExecutionResult executeEndFor(const ScriptCommand& cmd, int& currentIndex);
     ExecutionResult executeSet(const ScriptCommand& cmd);
     ExecutionResult executeLog(const ScriptCommand& cmd);
     ExecutionResult executeExtract(const ScriptCommand& cmd);

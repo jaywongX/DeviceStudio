@@ -304,9 +304,11 @@ void ChartWidget::addDataPoint(int index, double x, double y)
         
         // 限制数据点数量（实时图）
         if (config_.type == ChartType::RealTime) {
-            QCPDataContainer<QCPGraphData>* data = plot_->graph(index)->data();
-            while (data->size() > static_cast<size_t>(config_.maxPoints)) {
-                data->remove(data->beginKey());
+            QSharedPointer<QCPGraphDataContainer> data = plot_->graph(index)->data();
+            while (data->size() > config_.maxPoints) {
+                // 移除最旧的数据点（第一个）
+                double firstKey = data->constBegin()->key;
+                data->remove(firstKey);
             }
         }
         

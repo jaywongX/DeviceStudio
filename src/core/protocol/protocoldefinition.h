@@ -163,9 +163,9 @@ struct ProtocolDefinition {
 };
 
 /**
- * @brief 解析结果
+ * @brief 协议解析结果
  */
-struct ParseResult {
+struct ProtocolParseResult {
     bool success = false;               ///< 是否成功
     QString errorMessage;               ///< 错误信息
     QByteArray rawData;                 ///< 原始数据
@@ -211,6 +211,6 @@ Q_DECLARE_METATYPE(ProtocolField)
 Q_DECLARE_METATYPE(ChecksumConfig)
 Q_DECLARE_METATYPE(FrameConfig)
 Q_DECLARE_METATYPE(ProtocolDefinition)
-Q_DECLARE_METATYPE(ParseResult)
+Q_DECLARE_METATYPE(ProtocolParseResult)
 
 } // namespace DeviceStudio

@@ -273,12 +273,21 @@ ProjectConfig ProjectManager::jsonToConfig(const QJsonObject& json) const
 
 void ProjectManager::saveRecentProjects()
 {
-    ConfigManager::instance()->setValue("project.recent", m_recentProjects);
+    // 转换 QStringList 到 std::vector<std::string>
+    std::vector<std::string> recent;
+    for (const QString& path : m_recentProjects) {
+        recent.push_back(path.toStdString());
+    }
+    ConfigManager::instance().set("project.recent", recent);
 }
 
 void ProjectManager::loadRecentProjects()
 {
-    m_recentProjects = ConfigManager::instance()->value("project.recent").toStringList();
+    auto recent = ConfigManager::instance().get<std::vector<std::string>>("project.recent");
+    m_recentProjects.clear();
+    for (const auto& path : recent) {
+        m_recentProjects.append(QString::fromStdString(path));
+    }
 }
 
 } // namespace DeviceStudio

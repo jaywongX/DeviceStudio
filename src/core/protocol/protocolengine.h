@@ -88,29 +88,29 @@ public:
     bool hasProtocol(const QString& protocolId) const;
     
     // ========== 数据解析 ==========
-    
+
     /**
      * @brief 使用指定协议解析数据
      * @param protocolId 协议ID
      * @param data 原始数据
      * @return 解析结果
      */
-    ParseResult parse(const QString& protocolId, const QByteArray& data);
-    
+    ProtocolParseResult parse(const QString& protocolId, const QByteArray& data);
+
     /**
      * @brief 自动识别协议并解析数据
      * @param data 原始数据
      * @return 解析结果列表(可能匹配多个协议)
      */
-    QList<ParseResult> autoParse(const QByteArray& data);
-    
+    QList<ProtocolParseResult> autoParse(const QByteArray& data);
+
     /**
      * @brief 从缓冲区解析数据
      * @param protocolId 协议ID
      * @param buffer 数据缓冲区
      * @return 解析结果列表
      */
-    QList<ParseResult> parseFromBuffer(const QString& protocolId, QByteArray& buffer);
+    QList<ProtocolParseResult> parseFromBuffer(const QString& protocolId, QByteArray& buffer);
     
     /**
      * @brief 验证数据是否匹配协议
@@ -163,7 +163,7 @@ signals:
     /**
      * @brief 解析完成信号
      */
-    void parseCompleted(const ParseResult& result);
+    void parseCompleted(const ProtocolParseResult& result);
     
     /**
      * @brief 错误信号

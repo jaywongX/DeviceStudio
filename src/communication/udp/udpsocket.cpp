@@ -44,8 +44,8 @@ UdpSocket::UdpSocket(QObject* parent)
     setDeviceName("UDP Socket");
     socket_ = new QUdpSocket(this);
     
-    connect(socket_, &QUdpSocket::readyRead, this, &UdpSocket::onReadyRead);
-    connect(socket_, &QUdpSocket::errorOccurred, this, &UdpSocket::onError);
+    QObject::connect(socket_, &QUdpSocket::readyRead, this, &UdpSocket::onReadyRead);
+    QObject::connect(socket_, &QUdpSocket::errorOccurred, this, &UdpSocket::onError);
 }
 
 UdpSocket::UdpSocket(quint16 localPort, QObject* parent)

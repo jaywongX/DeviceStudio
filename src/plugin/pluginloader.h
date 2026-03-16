@@ -200,7 +200,7 @@ private:
     QStringList m_pluginPaths;                              ///< 插件搜索路径
     QMap<QString, IPluginPtr> m_plugins;                    ///< 已加载插件
     QMap<QString, QString> m_pluginFiles;                   ///< 插件文件路径映射
-    QString m_lastError;                                    ///< 最后的错误信息
+    mutable QString m_lastError;                            ///< 最后的错误信息
     
     static PluginLoader* s_instance;
 };

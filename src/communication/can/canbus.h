@@ -12,6 +12,7 @@
 #include <QCanBusDevice>
 #include <QCanBusFrame>
 #include <QTimer>
+#include <QDateTime>
 
 namespace DeviceStudio {
 

@@ -10,6 +10,10 @@
 #include "terminal/terminalwidget.h"
 #include "log/logger.h"
 #include "config/configmanager.h"
+#include "visualization/chart/chartwidget.h"
+#include "visualization/gauge/gaugewidget.h"
+#include "scripteditor/scripteditorwidget.h"
+#include "monitor/datamonitorpanel.h"
 
 #include <QApplication>
 #include <QMenuBar>

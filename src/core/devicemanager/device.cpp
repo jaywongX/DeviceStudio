@@ -63,4 +63,9 @@ void Device::setDeviceState(DeviceState state)
     }
 }
 
+void Device::setConfiguration(const QVariantMap& config)
+{
+    configuration_ = config;
+}
+
 } // namespace DeviceStudio

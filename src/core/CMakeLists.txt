@@ -56,9 +56,10 @@ target_include_directories(core PUBLIC
 # 链接依赖
 target_link_libraries(core PUBLIC
     utils
-    lua
+    lua_static
     sol2
     Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
 # 导出头文件

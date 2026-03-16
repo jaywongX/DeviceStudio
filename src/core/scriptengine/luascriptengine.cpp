@@ -16,6 +16,8 @@
 #include <QFileInfo>
 #include <QCryptographicHash>
 #include <QRandomGenerator>
+#include <QThread>
+#include <QRegularExpression>
 
 namespace DeviceStudio {
 
@@ -272,31 +274,35 @@ void LuaScriptEngine::registerProtocolAPI()
     
     // 校验和计算
     protocol.set_function("checksumXOR", [](const std::string& data) -> int {
-        quint8 checksum = Checksum::calculateXOR(QByteArray::fromRawData(data.data(), data.size()));
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
+        quint8 checksum = ChecksumCalculator::xorChecksum(ba);
         return checksum;
     });
-    
+
     protocol.set_function("checksumSUM", [](const std::string& data) -> int {
-        quint8 checksum = Checksum::calculateSUM(QByteArray::fromRawData(data.data(), data.size()));
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
+        quint8 checksum = ChecksumCalculator::sumChecksum(ba);
         return checksum;
     });
-    
+
     protocol.set_function("checksumSUM16", [](const std::string& data) -> int {
-        quint16 checksum = Checksum::calculateSUM16(QByteArray::fromRawData(data.data(), data.size()));
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
+        quint16 checksum = ChecksumCalculator::sum16Checksum(ba);
         return checksum;
     });
-    
+
     protocol.set_function("checksumCRC16", [](const std::string& data, const std::string& type) -> int {
-        QByteArray ba = QByteArray::fromRawData(data.data(), data.size());
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
         if (type == "modbus") {
-            return Checksum::calculateCRC16(ba, Checksum::CRC16Type::Modbus);
+            return ChecksumCalculator::crc16Modbus(ba);
         } else {
-            return Checksum::calculateCRC16(ba, Checksum::CRC16Type::CCITT);
+            return ChecksumCalculator::crc16(ba);
         }
     });
-    
+
     protocol.set_function("checksumCRC32", [](const std::string& data) -> int {
-        quint32 checksum = Checksum::calculateCRC32(QByteArray::fromRawData(data.data(), data.size()));
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
+        quint32 checksum = ChecksumCalculator::crc32(ba);
         return static_cast<int>(checksum);
     });
     

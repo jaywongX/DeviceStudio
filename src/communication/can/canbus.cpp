@@ -9,6 +9,7 @@
 #include "log/logger.h"
 #include <QCanBusDeviceInfo>
 #include <QDateTime>
+#include <QtGlobal>
 
 namespace DeviceStudio {
 
@@ -49,8 +50,13 @@ CanFrame CanFrame::fromQCanBusFrame(const QCanBusFrame& frame)
     cf.extended = frame.hasExtendedFrameFormat();
     cf.rtr = frame.frameType() == QCanBusFrame::RemoteRequestFrame;
     cf.error = frame.frameType() == QCanBusFrame::ErrorFrame;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
     cf.fdFormat = frame.hasFlexibleDataRateFormat();
     cf.bitrateSwitch = frame.hasBitrateSwitch();
+#else
+    cf.fdFormat = false;
+    cf.bitrateSwitch = false;
+#endif
     cf.payload = frame.payload();
     cf.timestamp = QDateTime::fromMSecsSinceEpoch(frame.timeStamp().microSeconds() / 1000);
     return cf;
@@ -61,7 +67,7 @@ QCanBusFrame CanFrame::toQCanBusFrame() const
     QCanBusFrame frame;
     frame.setFrameId(id);
     frame.setExtendedFrameFormat(extended);
-    
+
     if (rtr) {
         frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
         frame.setPayload(QByteArray());
@@ -69,12 +75,17 @@ QCanBusFrame CanFrame::toQCanBusFrame() const
         frame.setFrameType(QCanBusFrame::DataFrame);
         frame.setPayload(payload);
     }
-    
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
     if (fdFormat) {
         frame.setFlexibleDataRateFormat(true);
         frame.setBitrateSwitch(bitrateSwitch);
     }
-    
+#else
+    Q_UNUSED(fdFormat);
+    Q_UNUSED(bitrateSwitch);
+#endif
+
     return frame;
 }
 
@@ -177,18 +188,26 @@ bool CanBus::applyConfig()
     }
     
     // 连接信号
-    connect(canDevice_, &QCanBusDevice::framesReceived, this, &CanBus::onFramesReceived);
-    connect(canDevice_, &QCanBusDevice::errorOccurred, this, &CanBus::onErrorOccurred);
-    connect(canDevice_, &QCanBusDevice::stateChanged, this, &CanBus::onStateChanged);
+    QObject::connect(canDevice_, &QCanBusDevice::framesReceived, this, &CanBus::onFramesReceived);
+    QObject::connect(canDevice_, &QCanBusDevice::errorOccurred, this, &CanBus::onErrorOccurred);
+    QObject::connect(canDevice_, &QCanBusDevice::stateChanged, this, &CanBus::onStateChanged);
     
     // 配置参数
     canDevice_->setConfigurationParameter(QCanBusDevice::LoopbackKey, config_.loopback);
     canDevice_->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey, config_.receiveOwn);
-    
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (canDevice_->hasCanFd() && config_.canFd) {
         canDevice_->setConfigurationParameter(QCanBusDevice::CanFdKey, true);
         canDevice_->setConfigurationParameter(QCanBusDevice::DataBitRateKey, config_.dataBitrate);
     }
+#elif QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    // Qt 6: CAN FD 配置
+    if (config_.canFd) {
+        canDevice_->setConfigurationParameter(QCanBusDevice::CanFdKey, true);
+        canDevice_->setConfigurationParameter(QCanBusDevice::DataBitRateKey, config_.dataBitrate);
+    }
+#endif
     
     // 设置波特率（部分插件支持）
     if (canDevice_->configurationParameter(QCanBusDevice::BitRateKey).isValid()) {
@@ -309,18 +328,19 @@ bool CanBus::setFilter(quint32 id, quint32 mask, bool extended)
     if (!canDevice_) {
         return false;
     }
-    
+
     QCanBusDevice::Filter filter;
     filter.frameId = id;
     filter.frameIdMask = mask;
     filter.format = extended ? QCanBusDevice::Filter::MatchExtendedFormat : QCanBusDevice::Filter::MatchBaseFormat;
     filter.type = QCanBusFrame::DataFrame;
-    filter.typeMask = QCanBusFrame::RemoteRequestFrame;
-    
+    // Qt 6 移除了 typeMask，只使用 type 字段
+
     QList<QCanBusDevice::Filter> filters = canDevice_->configurationParameter(QCanBusDevice::UserKey).value<QList<QCanBusDevice::Filter>>();
     filters.append(filter);
-    
-    return canDevice_->setConfigurationParameter(QCanBusDevice::UserKey, QVariant::fromValue(filters));
+
+    canDevice_->setConfigurationParameter(QCanBusDevice::UserKey, QVariant::fromValue(filters));
+    return true;
 }
 
 void CanBus::clearFilters()

@@ -37,8 +37,8 @@ TcpServer::TcpServer(QObject* parent)
 {
     setDeviceName("TCP Server");
     server_ = new QTcpServer(this);
-    
-    connect(server_, &QTcpServer::newConnection, this, &TcpServer::onNewConnection);
+
+    QObject::connect(server_, &QTcpServer::newConnection, this, &TcpServer::onNewConnection);
 }
 
 TcpServer::TcpServer(quint16 port, QObject* parent)
@@ -206,9 +206,9 @@ void TcpServer::onNewConnection()
         clients_[clientId] = client;
         
         // 连接信号
-        connect(client, &QTcpSocket::readyRead, this, &TcpServer::onClientReadyRead);
-        connect(client, &QTcpSocket::disconnected, this, &TcpServer::onClientDisconnected);
-        connect(client, &QTcpSocket::errorOccurred, this, &TcpServer::onClientError);
+        QObject::connect(client, &QTcpSocket::readyRead, this, &TcpServer::onClientReadyRead);
+        QObject::connect(client, &QTcpSocket::disconnected, this, &TcpServer::onClientDisconnected);
+        QObject::connect(client, &QTcpSocket::errorOccurred, this, &TcpServer::onClientError);
         
         QString address = QString("%1:%2").arg(client->peerAddress().toString()).arg(client->peerPort());
         DS_LOG_INFO("Client {} connected: {}", clientId, address.toStdString());

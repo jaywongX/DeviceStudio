@@ -16,17 +16,18 @@ DeviceManager::DeviceManager(QObject* parent)
 {
 }
 
-IDevicePtr DeviceManager::createDevice(DeviceType type, 
+IDevicePtr DeviceManager::createDevice(DeviceType type,
                                         const QString& name,
                                         const QVariantMap& config)
 {
-    IDevicePtr device = std::make_shared<Device>(type);
-    device->setDeviceName(name);
-    
+    Device* rawDevice = new Device(type);
+    rawDevice->setName(name);
+
     if (!config.isEmpty()) {
-        device->setConfiguration(config);
+        rawDevice->setConfiguration(config);
     }
-    
+
+    IDevicePtr device(rawDevice);
     return device;
 }
 

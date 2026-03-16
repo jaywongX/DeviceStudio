@@ -84,8 +84,8 @@ SerialPort::SerialPort(QObject* parent)
     setDeviceName("Serial Port");
     serial_ = new QSerialPort(this);
     
-    connect(serial_, &QSerialPort::readyRead, this, &SerialPort::onReadyRead);
-    connect(serial_, &QSerialPort::errorOccurred, this, &SerialPort::onErrorOccurred);
+    QObject::connect(serial_, &QSerialPort::readyRead, this, &SerialPort::onReadyRead);
+    QObject::connect(serial_, &QSerialPort::errorOccurred, this, &SerialPort::onErrorOccurred);
 }
 
 SerialPort::SerialPort(const QString& portName, QObject* parent)

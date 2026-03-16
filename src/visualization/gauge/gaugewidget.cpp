@@ -7,6 +7,7 @@
 
 #include "gaugewidget.h"
 #include <QtMath>
+#include <QtGui/QPainterPath.h>
 
 namespace DeviceStudio {
 
@@ -133,7 +134,6 @@ void GaugeWidget::drawCircularGauge(QPainter& painter)
     painter.drawEllipse(rect);
     
     // 绘制前景弧
-    double startAngle = 90 * 16; // Qt使用1/16度
     double spanAngle = -270 * 16 * ((animatedValue_ - config_.minValue) / (config_.maxValue - config_.minValue));
     
     painter.setPen(QPen(config_.valueColor, 8, Qt::SolidLine, Qt::RoundCap));

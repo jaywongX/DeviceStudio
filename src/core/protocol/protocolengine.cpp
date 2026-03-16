@@ -131,47 +131,47 @@ bool ProtocolEngine::hasProtocol(const QString& protocolId) const
                       });
 }
 
-ParseResult ProtocolEngine::parse(const QString& protocolId, const QByteArray& data)
+ProtocolParseResult ProtocolEngine::parse(const QString& protocolId, const QByteArray& data)
 {
     auto parser = getProtocol(protocolId);
     if (!parser) {
-        ParseResult result;
+        ProtocolParseResult result;
         result.errorMessage = tr("未找到协议: %1").arg(protocolId);
         emit errorOccurred(result.errorMessage);
         return result;
     }
-    
-    ParseResult result = parser->parse(data);
+
+    ProtocolParseResult result = parser->parse(data);
     emit parseCompleted(result);
     return result;
 }
 
-QList<ParseResult> ProtocolEngine::autoParse(const QByteArray& data)
+QList<ProtocolParseResult> ProtocolEngine::autoParse(const QByteArray& data)
 {
-    QList<ParseResult> results;
-    
+    QList<ProtocolParseResult> results;
+
     // 匹配可能的协议
     QList<ProtocolParserPtr> matchedParsers = matchProtocols(data);
-    
+
     // 使用匹配的协议解析
     for (auto& parser : matchedParsers) {
-        ParseResult result = parser->parse(data);
+        ProtocolParseResult result = parser->parse(data);
         if (result.success) {
             results.append(result);
         }
     }
-    
+
     return results;
 }
 
-QList<ParseResult> ProtocolEngine::parseFromBuffer(const QString& protocolId, QByteArray& buffer)
+QList<ProtocolParseResult> ProtocolEngine::parseFromBuffer(const QString& protocolId, QByteArray& buffer)
 {
     auto parser = getProtocol(protocolId);
     if (!parser) {
         emit errorOccurred(tr("未找到协议: %1").arg(protocolId));
         return {};
     }
-    
+
     return parser->parseFromBuffer(buffer);
 }
 
@@ -181,8 +181,8 @@ bool ProtocolEngine::validate(const QString& protocolId, const QByteArray& data)
     if (!parser) {
         return false;
     }
-    
-    ParseResult result = parser->parse(data);
+
+    ProtocolParseResult result = parser->parse(data);
     return result.success && result.checksumValid;
 }
 

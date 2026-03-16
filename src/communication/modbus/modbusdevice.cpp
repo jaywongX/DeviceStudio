@@ -7,6 +7,8 @@
 
 #include "modbusdevice.h"
 #include "utils/log/logger.h"
+#include <QEventLoop>
+#include <QTimer>
 
 namespace DeviceStudio {
 
@@ -67,10 +69,9 @@ QVariantMap ModbusConfig::toVariantMap() const
 
 ModbusDevice::ModbusDevice(ModbusProtocol protocol, QObject* parent)
     : Device((protocol == ModbusProtocol::Rtu) ? DeviceType::ModbusRtu : DeviceType::ModbusTcp, parent)
-    , config_{.protocol = protocol}
 {
-    setDeviceName("Modbus Device");
     config_.protocol = protocol;
+    setDeviceName("Modbus Device");
 }
 
 ModbusDevice::ModbusDevice(QObject* parent)

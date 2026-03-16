@@ -43,7 +43,7 @@ ThemeManager::ThemeManager(QObject* parent)
     loadCustomThemes();
     
     // 应用默认主题
-    QString savedTheme = ConfigManager::instance()->value("ui.theme", "Light").toString();
+    QString savedTheme = QString::fromStdString(ConfigManager::instance().get<std::string>("ui.theme", "Light"));
     setTheme(savedTheme);
 }
 
@@ -63,7 +63,7 @@ bool ThemeManager::setTheme(const QString& themeName)
     m_colors = m_themes[themeName];
     
     // 保存配置
-    ConfigManager::instance()->setValue("ui.theme", themeName);
+    ConfigManager::instance().set<std::string>("ui.theme", themeName.toStdString());
     
     // 生成样式表
     generateStyleSheet();

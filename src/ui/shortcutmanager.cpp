@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QStandardPaths>
+#include <QApplication>
 
 namespace DeviceStudio {
 

@@ -24,18 +24,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 
 # ============================================================================
-# QCustomPlot - Qt图表库
-# ============================================================================
-FetchContent_Declare(
-    qcustomplot
-    GIT_REPOSITORY https://github.com/vasilyaksenov/QCustomPlot.git
-    GIT_TAG        master
-)
-FetchContent_MakeAvailable(qcustomplot)
-
-# ============================================================================
 # Lua - 脚本引擎
 # ============================================================================
+option(LUA_BUILD_LUA_COMPILER "Build lua compiler" OFF)
+option(LUA_BUILD_LUA_INTERPRETER "Build lua interpreter" OFF)
 FetchContent_Declare(
     lua
     GIT_REPOSITORY https://github.com/walterschell/Lua.git
@@ -52,6 +44,16 @@ FetchContent_Declare(
     GIT_TAG        v3.3.0
 )
 FetchContent_MakeAvailable(sol2)
+
+# 为 sol2 创建接口库（如果不存在）
+if(NOT TARGET sol2)
+    add_library(sol2 INTERFACE)
+    target_include_directories(sol2 INTERFACE
+        ${sol2_SOURCE_DIR}/include
+        ${lua_SOURCE_DIR}/include
+    )
+    target_link_libraries(sol2 INTERFACE lua_static)
+endif()
 
 # ============================================================================
 # Google Test - 单元测试框架 (可选)
@@ -76,7 +78,7 @@ endif()
 message(STATUS "=== Dependencies ===")
 message(STATUS "nlohmann/json: v3.11.2")
 message(STATUS "spdlog: v1.12.0")
-message(STATUS "QCustomPlot: v2.1.1")
+message(STATUS "QCustomPlot: local (thirdparty/QCustomPlot)")
 message(STATUS "Lua: v5.4.4")
 message(STATUS "sol2: v3.3.0")
 if(BUILD_TESTS)

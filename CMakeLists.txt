@@ -36,8 +36,8 @@ include(utils)
 # 查找 Qt
 # ============================================================================
 # 优先 Qt6，回退 Qt5
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent)
 
 # 可选 Qt 模块
 if(Qt${QT_VERSION_MAJOR}Charts_FOUND)
@@ -91,6 +91,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::SerialPort
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
 # 可选 Qt 模块

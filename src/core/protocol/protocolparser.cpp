@@ -63,9 +63,9 @@ void ProtocolParser::setProtocol(const ProtocolDefinition& protocol)
     emit protocolLoaded(m_protocol.name);
 }
 
-ParseResult ProtocolParser::parse(const QByteArray& data)
+ProtocolParseResult ProtocolParser::parse(const QByteArray& data)
 {
-    ParseResult result;
+    ProtocolParseResult result;
     result.rawData = data;
     
     if (!hasProtocol()) {
@@ -145,9 +145,9 @@ ParseResult ProtocolParser::parse(const QByteArray& data)
     return result;
 }
 
-QList<ParseResult> ProtocolParser::parseFromBuffer(QByteArray& buffer)
+QList<ProtocolParseResult> ProtocolParser::parseFromBuffer(QByteArray& buffer)
 {
-    QList<ParseResult> results;
+    QList<ProtocolParseResult> results;
     
     while (!buffer.isEmpty()) {
         int frameStart = findFrameStart(buffer);
@@ -171,8 +171,8 @@ QList<ParseResult> ProtocolParser::parseFromBuffer(QByteArray& buffer)
         // 提取并解析帧
         QByteArray frameData = buffer.left(frameEnd);
         buffer.remove(0, frameEnd);
-        
-        ParseResult result = parse(frameData);
+
+        ProtocolParseResult result = parse(frameData);
         results.append(result);
     }
     
@@ -617,13 +617,19 @@ QByteArray ProtocolParser::packField(const QVariant& value, const ProtocolField&
     case DataType::String: {
         QByteArray strData = value.toString().toUtf8();
         int len = qMin(strData.size(), field.length);
-        result.replace(0, len, strData.constData(), len);
+        result = result.leftJustified(len, '\0');
+        for (int i = 0; i < len; ++i) {
+            result[i] = strData[i];
+        }
         break;
     }
     case DataType::Bytes: {
         QByteArray bytes = value.toByteArray();
         int len = qMin(bytes.size(), field.length);
-        result.replace(0, len, bytes.constData(), len);
+        result = result.leftJustified(len, '\0');
+        for (int i = 0; i < len; ++i) {
+            result[i] = bytes[i];
+        }
         break;
     }
     case DataType::Bool: {

@@ -10,8 +10,10 @@
 #include <QWidget>
 #include <QPlainTextEdit>
 #include <QSyntaxHighlighter>
+#include <QRegularExpression>
 #include <QToolBar>
 #include <QLabel>
+#include <QTextCharFormat>
 #include <memory>
 
 namespace DeviceStudio {

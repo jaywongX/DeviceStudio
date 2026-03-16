@@ -1,5 +1,9 @@
 # src/plugin/examples/CMakeLists.txt - 示例插件构建配置
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 # 自定义协议插件
 add_library(CustomProtocolPlugin MODULE
     customprotocolplugin.cpp

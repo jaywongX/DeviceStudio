@@ -10,6 +10,7 @@
 
 #include <QJsonDocument>
 #include <QDir>
+#include <QFileInfo>
 #include <QDataStream>
 #include <QMutexLocker>
 

@@ -9,6 +9,7 @@
 #include "log/logger.h"
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QFileInfo>
 #include <QDataStream>
 #include <QTextStream>
 

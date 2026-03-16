@@ -270,12 +270,21 @@ WorkspaceConfig WorkspaceManager::jsonToConfig(const QJsonObject& json) const
 
 void WorkspaceManager::saveRecentWorkspaces()
 {
-    ConfigManager::instance()->setValue("workspace.recent", m_recentWorkspaces);
+    // 转换 QStringList 到 std::vector<std::string>
+    std::vector<std::string> recent;
+    for (const QString& path : m_recentWorkspaces) {
+        recent.push_back(path.toStdString());
+    }
+    ConfigManager::instance().set("workspace.recent", recent);
 }
 
 void WorkspaceManager::loadRecentWorkspaces()
 {
-    m_recentWorkspaces = ConfigManager::instance()->value("workspace.recent").toStringList();
+    auto recent = ConfigManager::instance().get<std::vector<std::string>>("workspace.recent");
+    m_recentWorkspaces.clear();
+    for (const auto& path : recent) {
+        m_recentWorkspaces.append(QString::fromStdString(path));
+    }
 }
 
 } // namespace DeviceStudio
