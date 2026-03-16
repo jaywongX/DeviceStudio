@@ -167,7 +167,7 @@ TEST_F(ProtocolTest, ParseSimpleFrame)
     
     // 解析数据: AA 55 12 34
     QByteArray data = QByteArray::fromHex("AA551234");
-    ParseResult result = parser.parse(data);
+    ProtocolParseResult result = parser.parse(data);
     
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.getValue("value1").toUInt(), 0x12);
@@ -199,7 +199,7 @@ TEST_F(ProtocolTest, ParseUint16BigEndian)
     
     // 数据: AA 55 12 34 (大端序 = 0x1234 = 4660)
     QByteArray data = QByteArray::fromHex("AA551234");
-    ParseResult result = parser.parse(data);
+    ProtocolParseResult result = parser.parse(data);
     
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.getValue("value").toUInt(), 0x1234);
@@ -230,7 +230,7 @@ TEST_F(ProtocolTest, ParseUint16LittleEndian)
     
     // 数据: AA 55 34 12 (小端序 = 0x1234 = 4660)
     QByteArray data = QByteArray::fromHex("AA553412");
-    ParseResult result = parser.parse(data);
+    ProtocolParseResult result = parser.parse(data);
     
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.getValue("value").toUInt(), 0x1234);
@@ -262,7 +262,7 @@ TEST_F(ProtocolTest, ParseWithScale)
     
     // 数据: AA 55 00 FA (250 * 0.1 = 25.0)
     QByteArray data = QByteArray::fromHex("AA5500FA");
-    ParseResult result = parser.parse(data);
+    ProtocolParseResult result = parser.parse(data);
     
     EXPECT_TRUE(result.success);
     EXPECT_DOUBLE_EQ(result.getValue("temperature").toDouble(), 25.0);
@@ -298,7 +298,7 @@ TEST_F(ProtocolTest, ParseWithValueMap)
     ASSERT_TRUE(parser.loadFromJson(json));
     
     QByteArray data = QByteArray::fromHex("AA5501");
-    ParseResult result = parser.parse(data);
+    ProtocolParseResult result = parser.parse(data);
     
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.getValue("status").toUInt(), 1);
@@ -358,12 +358,12 @@ TEST_F(ProtocolTest, AutoParse)
     
     // 自动解析
     QByteArray data1 = QByteArray::fromHex("AA551234");
-    QList<ParseResult> results1 = engine->autoParse(data1);
+    QList<ProtocolParseResult> results1 = engine->autoParse(data1);
     EXPECT_EQ(results1.size(), 1);
     EXPECT_EQ(results1[0].protocolName, "Proto1");
     
     QByteArray data2 = QByteArray::fromHex("BB66ABCD");
-    QList<ParseResult> results2 = engine->autoParse(data2);
+    QList<ProtocolParseResult> results2 = engine->autoParse(data2);
     EXPECT_EQ(results2.size(), 1);
     EXPECT_EQ(results2[0].protocolName, "Proto2");
 }
