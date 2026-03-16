@@ -29,12 +29,14 @@ if(WIN32)
         add_definitions(-DWIN32_LEAN_AND_MEAN)
         add_definitions(-DNOMINMAX)
         
-        # 调试选项
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            add_compile_options(/Od /Zi)  # 禁用优化，生成调试信息
-        else()
-            add_compile_options(/O2)       # 优化级别2
-        endif()
+        # 调试/发布选项（使用生成器表达式支持 Visual Studio 多配置）
+        add_compile_options(
+            $<$<CONFIG:Debug>:/Od>    # Debug: 禁用优化
+            $<$<CONFIG:Debug>:/Zi>    # Debug: 生成调试信息
+            $<$<CONFIG:Release>:/O2>  # Release: 优化级别2
+            $<$<CONFIG:RelWithDebInfo>:/O2>  # RelWithDebInfo: 优化级别2
+            $<$<CONFIG:MinSizeRel>:/O1>       # MinSizeRel: 最小大小优化
+        )
     endif()
     
 elseif(UNIX AND NOT APPLE)

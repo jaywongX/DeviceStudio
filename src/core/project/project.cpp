@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QDateTime>
 #include <QStandardPaths>
+#include <QJsonArray>
 
 namespace DeviceStudio {
 

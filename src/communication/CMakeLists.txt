@@ -20,6 +20,9 @@ set(COMMUNICATION_HEADERS
     can/canbus.h
 )
 
+# 定义源文件分组（Visual Studio 过滤器）
+GROUP_FILES(${COMMUNICATION_SOURCES} ${COMMUNICATION_HEADERS} "")
+
 # 创建静态库
 add_library(communication STATIC
     ${COMMUNICATION_SOURCES}

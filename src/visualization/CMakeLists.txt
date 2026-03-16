@@ -20,6 +20,9 @@ set(VISUALIZATION_HEADERS
     gauge/switchindicator.h
 )
 
+# 定义源文件分组（Visual Studio 过滤器）
+GROUP_FILES(${VISUALIZATION_SOURCES} ${VISUALIZATION_HEADERS} "")
+
 # 创建静态库
 add_library(visualization STATIC
     ${VISUALIZATION_SOURCES}

@@ -24,6 +24,9 @@ set(UI_HEADERS
     shortcutmanager.h
 )
 
+# 定义源文件分组（Visual Studio 过滤器）
+GROUP_FILES(${UI_SOURCES} ${UI_HEADERS} "")
+
 # 创建静态库
 add_library(ui STATIC
     ${UI_SOURCES}

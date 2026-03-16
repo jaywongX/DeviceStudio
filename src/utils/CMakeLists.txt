@@ -12,6 +12,9 @@ set(UTILS_HEADERS
     config/configmanager.h
 )
 
+# 定义源文件分组（Visual Studio 过滤器）
+GROUP_FILES(${UTILS_SOURCES} ${UTILS_HEADERS} "")
+
 # 创建静态库
 add_library(utils STATIC
     ${UTILS_SOURCES}

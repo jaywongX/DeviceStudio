@@ -9,6 +9,7 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <vector>
+#include <QtCore/QDebug>
 
 namespace DeviceStudio {
 
@@ -68,18 +69,11 @@ void Logger::log(LogLevel level, const std::string& message)
     }
     
     switch (level) {
-        case LogLevel::Debug:
-            logger_->debug(message);
-            break;
-        case LogLevel::Info:
-            logger_->info(message);
-            break;
-        case LogLevel::Warning:
-            logger_->warn(message);
-            break;
-        case LogLevel::Error:
-            logger_->error(message);
-            break;
+        case LogLevel::Trace:   logger_->trace(message); break;
+        case LogLevel::Debug:   logger_->debug(message); break;
+        case LogLevel::Info:    logger_->info(message); break;
+        case LogLevel::Warning: logger_->warn(message); break;
+        case LogLevel::Error:   logger_->error(message); break;
     }
 }
 
@@ -106,6 +100,7 @@ void Logger::flush()
 spdlog::level::level_enum Logger::toSpdlogLevel(LogLevel level) const
 {
     switch (level) {
+        case LogLevel::Trace:   return spdlog::level::trace;
         case LogLevel::Debug:   return spdlog::level::debug;
         case LogLevel::Info:    return spdlog::level::info;
         case LogLevel::Warning: return spdlog::level::warn;
@@ -117,6 +112,7 @@ spdlog::level::level_enum Logger::toSpdlogLevel(LogLevel level) const
 LogLevel Logger::fromSpdlogLevel(spdlog::level::level_enum level) const
 {
     switch (level) {
+        case spdlog::level::trace: return LogLevel::Trace;
         case spdlog::level::debug: return LogLevel::Debug;
         case spdlog::level::info:  return LogLevel::Info;
         case spdlog::level::warn:  return LogLevel::Warning;

@@ -1,49 +1,41 @@
 #!/bin/bash
 
-echo "========================================"
-echo "DeviceStudio Build Script for Linux"
-echo "========================================"
-echo ""
+# =============== Set some local variables here. ===============
+# You can change the name of build directory here:
+BUILD_DIR_NAME=build-linux
 
-# 设置 Qt 路径 (如需要)
-# export Qt6_DIR=/path/to/Qt/6.6.0/gcc_64/lib/cmake/Qt6
+# Save project root path.
+PROJECT_ROOT=`pwd`
 
-# 创建构建目录
-echo "[1/4] Creating build directory..."
-mkdir -p build
-cd build
+# Get processor name.
+PROCESSOR=`uname -p`
 
-# 配置
-echo ""
-echo "[2/4] Configuring CMake..."
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTS=ON
+function build() {
+    # Specify build type:
+    BUILD_TYPE=$1
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERROR: CMake configuration failed!"
-    exit 1
-fi
+    # Specify install dir, binary files will be installed to here:
+    INSTALL_DIR=$PROJECT_ROOT/built/linux/$PROCESSOR/$BUILD_TYPE
 
-# 构建 (使用所有核心)
-echo ""
-echo "[3/4] Building project..."
-make -j$(nproc)
+    # =================== Try to make directory. ===================
+    if [ ! -d $BUILD_DIR_NAME ]; then
+        mkdir $BUILD_DIR_NAME
+    fi
+    # ==============================================================
+    cd $BUILD_DIR_NAME
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERROR: Build failed!"
-    exit 1
-fi
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE        \
+          -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+          -DCMAKE_C_COMPILER=/usr/bin/gcc       \
+          -DCMAKE_CXX_COMPILER=/usr/bin/g++     \
+          -DCMAKE_VERBOSE_MAKEFILE=FALSE        \
+          ..
+    cmake --build .            \
+          --config $BUILD_TYPE \
+          -- -j $(nproc) &&    \
+    make install
+    cd "$PROJECT_ROOT"
+}
 
-# 运行测试
-echo ""
-echo "[4/4] Running tests..."
-ctest --output-on-failure
-
-echo ""
-echo "========================================"
-echo "Build complete!"
-echo "Executable: build/bin/DeviceStudio"
-echo "========================================"
+build Debug
+build Release

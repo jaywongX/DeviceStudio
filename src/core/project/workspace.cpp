@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QJsonDocument>
 #include <QDateTime>
+#include <QJsonArray>
 
 namespace DeviceStudio {
 

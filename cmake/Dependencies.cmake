@@ -28,8 +28,8 @@ FetchContent_MakeAvailable(spdlog)
 # ============================================================================
 FetchContent_Declare(
     qcustomplot
-    GIT_REPOSITORY https://github.com/VSRonin/QCustomPlot.git
-    GIT_TAG        v2.1.1
+    GIT_REPOSITORY https://github.com/vasilyaksenov/QCustomPlot.git
+    GIT_TAG        master
 )
 FetchContent_MakeAvailable(qcustomplot)
 

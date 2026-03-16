@@ -13,6 +13,7 @@
 #include <QThread>
 #include <QEventLoop>
 #include <QTimer>
+#include <QCoreApplication>
 
 namespace DeviceStudio {
 

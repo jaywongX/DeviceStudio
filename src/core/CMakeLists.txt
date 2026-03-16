@@ -39,6 +39,9 @@ set(CORE_HEADERS
     project/workspace.h
 )
 
+# 定义源文件分组（Visual Studio 过滤器）
+GROUP_FILES(${CORE_SOURCES} ${CORE_HEADERS} "")
+
 # 创建静态库
 add_library(core STATIC
     ${CORE_SOURCES}

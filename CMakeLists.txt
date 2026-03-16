@@ -30,13 +30,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(CompilerOptions)
 include(Dependencies)
+include(utils)
 
 # ============================================================================
 # 查找 Qt
 # ============================================================================
 # 优先 Qt6，回退 Qt5
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport)
 
 # 可选 Qt 模块
 if(Qt${QT_VERSION_MAJOR}Charts_FOUND)

@@ -19,6 +19,7 @@ namespace DeviceStudio {
  * @brief 日志级别枚举
  */
 enum class LogLevel {
+    Trace,      ///< 跟踪信息
     Debug,      ///< 调试信息
     Info,       ///< 一般信息
     Warning,    ///< 警告信息
@@ -55,6 +56,28 @@ public:
      * @param message 日志消息
      */
     void log(LogLevel level, const std::string& message);
+    
+    /**
+     * @brief 记录日志（支持 fmt 格式化）
+     * @tparam Args 格式化参数类型
+     * @param level 日志级别
+     * @param fmt 格式化字符串
+     * @param args 格式化参数
+     */
+    template<typename... Args>
+    void log(LogLevel level, spdlog::format_string_t<Args...> fmt, Args&&... args)
+    {
+        if (!logger_) {
+            return;
+        }
+        switch (level) {
+            case LogLevel::Trace:   logger_->trace(fmt, std::forward<Args>(args)...); break;
+            case LogLevel::Debug:   logger_->debug(fmt, std::forward<Args>(args)...); break;
+            case LogLevel::Info:    logger_->info(fmt, std::forward<Args>(args)...); break;
+            case LogLevel::Warning: logger_->warn(fmt, std::forward<Args>(args)...); break;
+            case LogLevel::Error:   logger_->error(fmt, std::forward<Args>(args)...); break;
+        }
+    }
     
     /**
      * @brief 设置日志级别
@@ -99,8 +122,10 @@ private:
 
 } // namespace DeviceStudio
 
-// 日志宏定义
-#define DS_LOG_DEBUG(msg)    DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Debug, msg)
-#define DS_LOG_INFO(msg)     DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Info, msg)
-#define DS_LOG_WARNING(msg)  DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Warning, msg)
-#define DS_LOG_ERROR(msg)    DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Error, msg)
+// 日志宏定义（支持 fmt 格式化）
+#define DS_LOG_TRACE(fmt, ...)   DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#define DS_LOG_DEBUG(fmt, ...)   DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#define DS_LOG_INFO(fmt, ...)    DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Info, fmt, ##__VA_ARGS__)
+#define DS_LOG_WARN(fmt, ...)    DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Warning, fmt, ##__VA_ARGS__)
+#define DS_LOG_WARNING(fmt, ...) DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Warning, fmt, ##__VA_ARGS__)
+#define DS_LOG_ERROR(fmt, ...)   DeviceStudio::Logger::instance().log(DeviceStudio::LogLevel::Error, fmt, ##__VA_ARGS__)
