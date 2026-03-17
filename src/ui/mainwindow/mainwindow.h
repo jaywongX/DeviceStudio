@@ -25,6 +25,11 @@ class GaugeWidget;
 class ScriptEditorWidget;
 class DataMonitorPanel;
 class DeviceManager;
+class ProjectManager;
+
+// 枚举前向声明
+enum class DeviceType;
+enum class DeviceTypeConfig;
 
 /**
  * @brief 主窗口类
@@ -148,6 +153,21 @@ private slots:
     void onStopScript();
     
     /**
+     * @brief 剪切
+     */
+    void onCut();
+    
+    /**
+     * @brief 复制
+     */
+    void onCopy();
+    
+    /**
+     * @brief 粘贴
+     */
+    void onPaste();
+    
+    /**
      * @brief 数据接收
      */
     void onDataReceived(const QByteArray& data);
@@ -156,10 +176,27 @@ private slots:
      * @brief 更新状态栏
      */
     void updateStatusBar();
+    
+    /**
+     * @brief 检查是否有未保存的数据
+     * @return 是否可以继续关闭
+     */
+    bool checkUnsavedChanges();
+    
+    /**
+     * @brief 更新窗口标题
+     */
+    void updateWindowTitle();
+    
+    /**
+     * @brief 转换设备类型
+     */
+    static DeviceType convertDeviceType(DeviceTypeConfig configType);
 
 private:
     // 核心组件
     std::shared_ptr<DeviceManager> deviceManager_;
+    ProjectManager* projectManager_ = nullptr;
     
     // UI 组件
     QTabWidget* centralTabWidget_ = nullptr;

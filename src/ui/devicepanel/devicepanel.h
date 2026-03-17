@@ -15,6 +15,8 @@
 
 namespace DeviceStudio {
 
+class DeviceManager;
+
 /**
  * @brief 设备面板类
  * 
@@ -27,6 +29,11 @@ class DevicePanel : public QWidget
 public:
     explicit DevicePanel(QWidget* parent = nullptr);
     ~DevicePanel() override = default;
+    
+    /**
+     * @brief 设置设备管理器
+     */
+    void setDeviceManager(std::shared_ptr<DeviceManager> manager);
     
     /**
      * @brief 刷新设备列表
@@ -95,8 +102,14 @@ private:
      * @brief 获取选中的设备ID
      */
     QString getSelectedDeviceId() const;
+    
+    /**
+     * @brief 设备类型转换为显示名称
+     */
+    QString deviceTypeToCategory(const QString& deviceType) const;
 
 private:
+    std::shared_ptr<DeviceManager> deviceManager_;
     QTreeWidget* deviceTree_ = nullptr;
     QPushButton* addButton_ = nullptr;
     QPushButton* removeButton_ = nullptr;

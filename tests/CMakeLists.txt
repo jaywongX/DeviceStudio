@@ -6,6 +6,8 @@ set(TEST_SOURCES
     utils/test_logger.cpp
     utils/test_configmanager.cpp
     core/test_device.cpp
+    core/test_project.cpp
+    core/test_devicemanager.cpp
     test_protocol.cpp
 )
 
@@ -18,6 +20,7 @@ target_link_libraries(tests PRIVATE
     core
     gtest
     Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Test
 )
 
 # 注册测试

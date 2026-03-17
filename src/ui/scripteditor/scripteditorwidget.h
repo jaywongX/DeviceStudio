@@ -109,6 +109,11 @@ signals:
      * @brief 脚本修改信号
      */
     void scriptModified();
+    
+    /**
+     * @brief 脚本停止信号
+     */
+    void scriptStopped();
 
 private slots:
     void onRunClicked();

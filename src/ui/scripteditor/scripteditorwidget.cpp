@@ -294,12 +294,18 @@ void ScriptEditorWidget::stopScript()
         return;
     }
     
-    // TODO: 实现脚本停止逻辑
-    outputWidget_->appendPlainText(tr("\n--- 脚本已停止 ---\n"));
+    // 调用脚本引擎停止
+    if (scriptEngine_) {
+        scriptEngine_->stop();
+    }
+    
+    outputWidget_->appendPlainText(tr("\n--- 正在停止脚本 ---\n"));
     
     isRunning_ = false;
     statusLabel_->setText(tr("已停止"));
     statusLabel_->setStyleSheet("QLabel { background-color: #ff9800; padding: 2px; }");
+    
+    emit scriptStopped();
 }
 
 void ScriptEditorWidget::clearOutput()

@@ -14,6 +14,7 @@
 #include <sol/sol.hpp>
 #include <memory>
 #include <functional>
+#include <atomic>
 
 namespace DeviceStudio {
 
@@ -127,6 +128,16 @@ public:
      * @brief 停止所有定时器
      */
     void stopAllTimers();
+    
+    /**
+     * @brief 请求停止脚本执行
+     */
+    void stop();
+    
+    /**
+     * @brief 是否已请求停止
+     */
+    bool isStopRequested() const { return stopRequested_; }
 
 signals:
     /**
@@ -170,6 +181,9 @@ private:
     // 定时器管理
     QMap<int, QTimer*> timers_;
     int nextTimerId_ = 1;
+    
+    // 停止标志
+    std::atomic<bool> stopRequested_{false};
 };
 
 } // namespace DeviceStudio

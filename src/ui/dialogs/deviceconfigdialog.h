@@ -91,6 +91,12 @@ private:
     void setModbusRtuConfig(const QVariantMap& config);
     void setModbusTcpConfig(const QVariantMap& config);
     
+    // 测试连接方法
+    bool testSerialConnection(QString& errorMsg);
+    bool testTcpClientConnection(QString& errorMsg);
+    bool testTcpServerConnection(QString& errorMsg);
+    bool testUdpConnection(QString& errorMsg);
+    
     // 通用控件
     QLineEdit* deviceNameEdit_ = nullptr;
     QComboBox* deviceTypeCombo_ = nullptr;

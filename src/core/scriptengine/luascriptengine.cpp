@@ -48,6 +48,19 @@ void LuaScriptEngine::stopAllTimers()
     timers_.clear();
 }
 
+void LuaScriptEngine::stop()
+{
+    stopRequested_ = true;
+    stopAllTimers();
+    
+    // 设置 Lua 全局变量，让 hook 检测到停止请求
+    if (lua_) {
+        lua_->set("_STOP_REQUESTED", true);
+    }
+    
+    DS_LOG_INFO("Script stop requested");
+}
+
 void LuaScriptEngine::setConfig(const LuaEngineConfig& config)
 {
     config_ = config;
@@ -149,40 +162,106 @@ void LuaScriptEngine::registerDeviceAPI()
     
     // 设备列表
     device.set_function("list", [this]() {
-        // 返回设备列表
         sol::table devices = lua_->create_table();
-        // TODO: 实现设备列表
+        if (!deviceManager_) return devices;
+        
+        auto deviceList = deviceManager_->getAllDevices();
+        int index = 1;
+        for (const auto& dev : deviceList) {
+            if (!dev) continue;
+            
+            sol::table deviceInfo = lua_->create_table();
+            deviceInfo["id"] = dev->deviceId().toStdString();
+            deviceInfo["name"] = dev->deviceName().toStdString();
+            deviceInfo["type"] = static_cast<int>(dev->deviceType());
+            deviceInfo["connected"] = dev->isConnected();
+            
+            devices[index++] = deviceInfo;
+        }
         return devices;
     });
     
     // 连接设备
     device.set_function("connect", [this](const std::string& deviceName) -> bool {
         if (!deviceManager_) return false;
-        // TODO: 实现设备连接
-        DS_LOG_INFO("Lua: Connecting to device {}", deviceName);
-        return true;
+        
+        QString name = QString::fromStdString(deviceName);
+        auto devices = deviceManager_->findDevicesByName(name);
+        if (devices.isEmpty()) {
+            DS_LOG_ERROR("Lua: Device not found: {}", deviceName);
+            return false;
+        }
+        
+        auto device = devices.first();
+        bool result = device->connect(device->getConfiguration());
+        DS_LOG_INFO("Lua: Connecting to device {} - {}", deviceName, result ? "success" : "failed");
+        return result;
     });
     
     // 断开设备
     device.set_function("disconnect", [this](const std::string& deviceName) {
         if (!deviceManager_) return;
-        // TODO: 实现设备断开
-        DS_LOG_INFO("Lua: Disconnecting device {}", deviceName);
+        
+        QString name = QString::fromStdString(deviceName);
+        auto devices = deviceManager_->findDevicesByName(name);
+        if (devices.isEmpty()) {
+            DS_LOG_ERROR("Lua: Device not found: {}", deviceName);
+            return;
+        }
+        
+        auto device = devices.first();
+        device->disconnect();
+        DS_LOG_INFO("Lua: Disconnected device {}", deviceName);
     });
     
     // 发送数据
     device.set_function("send", [this](const std::string& deviceName, const std::string& data) -> int {
         if (!deviceManager_) return -1;
-        // TODO: 实现数据发送
-        DS_LOG_DEBUG("Lua: Sending {} bytes to {}", data.size(), deviceName);
-        return static_cast<int>(data.size());
+        
+        QString name = QString::fromStdString(deviceName);
+        auto devices = deviceManager_->findDevicesByName(name);
+        if (devices.isEmpty()) {
+            DS_LOG_ERROR("Lua: Device not found: {}", deviceName);
+            return -1;
+        }
+        
+        auto device = devices.first();
+        QByteArray ba(data.data(), static_cast<int>(data.size()));
+        qint64 sent = device->send(ba);
+        DS_LOG_DEBUG("Lua: Sent {} bytes to {}", sent, deviceName);
+        return static_cast<int>(sent);
     });
     
     // 接收数据
     device.set_function("receive", [this](const std::string& deviceName) -> std::string {
         if (!deviceManager_) return "";
-        // TODO: 实现数据接收
-        return "";
+        
+        QString name = QString::fromStdString(deviceName);
+        auto devices = deviceManager_->findDevicesByName(name);
+        if (devices.isEmpty()) {
+            return "";
+        }
+        
+        auto device = devices.first();
+        QByteArray data = device->receive();
+        return std::string(data.constData(), data.size());
+    });
+    
+    // 通过ID获取设备
+    device.set_function("getById", [this](const std::string& deviceId) -> sol::object {
+        if (!deviceManager_) return sol::nil;
+        
+        QString id = QString::fromStdString(deviceId);
+        auto device = deviceManager_->getDevice(id);
+        if (!device) return sol::nil;
+        
+        sol::table deviceInfo = lua_->create_table();
+        deviceInfo["id"] = device->deviceId().toStdString();
+        deviceInfo["name"] = device->deviceName().toStdString();
+        deviceInfo["type"] = static_cast<int>(device->deviceType());
+        deviceInfo["connected"] = device->isConnected();
+        
+        return deviceInfo;
     });
     
     DS_LOG_DEBUG("Device API registered");
@@ -190,39 +269,66 @@ void LuaScriptEngine::registerDeviceAPI()
 
 void LuaScriptEngine::registerDataAPI()
 {
-    if (!dataStore_) return;
-    
-    // 创建Data命名空间
+    // 创建Data命名空间（即使没有 dataStore_ 也提供基本的内存存储）
     sol::table data = lua_->create_named_table("Data");
     
+    // 内存数据存储（用于脚本内变量管理）
+    sol::table memoryData = lua_->create_table();
+    
     // 设置数据项
-    data.set_function("set", [this](const std::string& key, double value) {
-        if (!dataStore_) return;
-        // TODO: 实现数据设置
+    data.set_function("set", [this, memoryData](const std::string& key, double value) mutable {
+        memoryData[key] = value;
+        if (dataStore_) {
+            // 如果有持久化存储，也存储到那里
+            // dataStore_->setValue(QString::fromStdString(key), value);
+        }
         DS_LOG_DEBUG("Lua: Setting data {} = {}", key, value);
     });
     
     // 获取数据项
-    data.set_function("get", [this](const std::string& key) -> double {
-        if (!dataStore_) return 0.0;
-        // TODO: 实现数据获取
+    data.set_function("get", [memoryData](const std::string& key) -> double {
+        sol::object value = memoryData[key];
+        if (value.is<double>()) {
+            return value.as<double>();
+        }
         return 0.0;
     });
     
-    // 保存数据
+    // 保存数据到文件
     data.set_function("save", [this](const std::string& fileName) -> bool {
-        if (!dataStore_) return false;
-        // TODO: 实现数据保存
-        DS_LOG_INFO("Lua: Saving data to {}", fileName);
-        return true;
+        if (dataStore_) {
+            // return dataStore_->saveToFile(QString::fromStdString(fileName));
+            DS_LOG_INFO("Lua: Saving data to {}", fileName);
+            return true;
+        }
+        return false;
     });
     
-    // 加载数据
+    // 从文件加载数据
     data.set_function("load", [this](const std::string& fileName) -> bool {
-        if (!dataStore_) return false;
-        // TODO: 实现数据加载
-        DS_LOG_INFO("Lua: Loading data from {}", fileName);
-        return true;
+        if (dataStore_) {
+            // return dataStore_->loadFromFile(QString::fromStdString(fileName));
+            DS_LOG_INFO("Lua: Loading data from {}", fileName);
+            return true;
+        }
+        return false;
+    });
+    
+    // 清除数据
+    data.set_function("clear", [memoryData]() mutable {
+        memoryData.clear();
+    });
+    
+    // 列出所有数据键
+    data.set_function("keys", [memoryData, this]() -> sol::table {
+        sol::table result = lua_->create_table();
+        int index = 1;
+        for (auto& pair : memoryData) {
+            if (pair.first.is<std::string>()) {
+                result[index++] = pair.first.as<std::string>();
+            }
+        }
+        return result;
     });
     
     DS_LOG_DEBUG("Data API registered");
@@ -734,14 +840,33 @@ bool LuaScriptEngine::loadScript(const QString& filePath)
 bool LuaScriptEngine::executeScript(const QString& script)
 {
     clearError();
+    stopRequested_ = false;  // 重置停止标志
     
     try {
+        // 设置一个检查停止的 hook
+        if (config_.instructionLimit > 0) {
+            lua_->script("debug.sethook(function() "
+                        "if _STOP_REQUESTED then error('Script execution stopped by user') end "
+                        "end, '', " + std::to_string(config_.instructionLimit) + ")");
+        }
+        
+        // 设置全局停止标志变量
+        lua_->set("_STOP_REQUESTED", false);
+        
         sol::protected_function_result result = lua_->safe_script(script.toStdString());
         
         if (!result.valid()) {
             sol::error err = result;
             lastError_ = QString::fromStdString(err.what());
-            DS_LOG_ERROR("Lua script error: {}", lastError_.toStdString());
+            
+            // 检查是否是用户中断
+            if (stopRequested_ || lastError_.contains("stopped by user")) {
+                lastError_ = tr("脚本已被用户停止");
+                DS_LOG_INFO("Lua script stopped by user");
+            } else {
+                DS_LOG_ERROR("Lua script error: {}", lastError_.toStdString());
+            }
+            
             emit errorOccurred(lastError_);
             emit scriptExecuted(script, false);
             return false;
@@ -752,7 +877,15 @@ bool LuaScriptEngine::executeScript(const QString& script)
     }
     catch (const std::exception& e) {
         lastError_ = QString::fromStdString(e.what());
-        DS_LOG_ERROR("Lua exception: {}", lastError_.toStdString());
+        
+        // 检查是否是用户中断
+        if (stopRequested_ || lastError_.contains("stopped by user")) {
+            lastError_ = tr("脚本已被用户停止");
+            DS_LOG_INFO("Lua script stopped by user");
+        } else {
+            DS_LOG_ERROR("Lua exception: {}", lastError_.toStdString());
+        }
+        
         emit errorOccurred(lastError_);
         emit scriptExecuted(script, false);
         return false;

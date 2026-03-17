@@ -321,9 +321,42 @@ ExecutionResult ScriptExecutor::executeConnect(const ScriptCommand& cmd)
         int baudrate = cmd.arguments.size() > 2 ? cmd.arguments[2].toInt() : 115200;
         
         if (deviceManager_) {
-            // TODO: 调用设备管理器连接
+            // 查找匹配的设备
+            auto devices = deviceManager_->findDevicesByName(port);
+            if (!devices.isEmpty()) {
+                auto device = devices.first();
+                QVariantMap config;
+                config["portName"] = port;
+                config["baudRate"] = baudrate;
+                
+                if (device->connect(config)) {
+                    context_.currentDevice = port;
+                    emit logOutput(QString("连接串口成功: %1, 波特率: %2").arg(port).arg(baudrate));
+                } else {
+                    result.success = false;
+                    result.message = QString("连接串口失败: %1").arg(port);
+                    return result;
+                }
+            } else {
+                // 设备不存在，尝试通过ID查找
+                auto device = deviceManager_->getDevice(port);
+                if (device) {
+                    if (device->connect(device->getConfiguration())) {
+                        context_.currentDevice = port;
+                        emit logOutput(QString("连接设备成功: %1").arg(port));
+                    } else {
+                        result.success = false;
+                        result.message = QString("连接设备失败: %1").arg(port);
+                        return result;
+                    }
+                } else {
+                    context_.currentDevice = port;
+                    emit logOutput(QString("设备未注册，记录连接目标: %1").arg(port));
+                }
+            }
+        } else {
             context_.currentDevice = port;
-            emit logOutput(QString("连接串口: %1, 波特率: %2").arg(port).arg(baudrate));
+            emit logOutput(QString("设备管理器未设置，记录连接目标: %1").arg(port));
         }
     } else if (type == "TCP") {
         // TCP连接: CONNECT TCP 192.168.1.100 5000
@@ -334,11 +367,63 @@ ExecutionResult ScriptExecutor::executeConnect(const ScriptCommand& cmd)
         }
         QString host = cmd.arguments[1];
         int port = cmd.arguments[2].toInt();
+        QString deviceKey = QString("%1:%2").arg(host).arg(port);
         
         if (deviceManager_) {
-            // TODO: 调用设备管理器连接
-            context_.currentDevice = QString("%1:%2").arg(host).arg(port);
-            emit logOutput(QString("连接TCP: %1:%2").arg(host).arg(port));
+            // 查找匹配的设备
+            auto devices = deviceManager_->findDevicesByName(deviceKey);
+            if (!devices.isEmpty()) {
+                auto device = devices.first();
+                QVariantMap config;
+                config["hostAddress"] = host;
+                config["port"] = port;
+                
+                if (device->connect(config)) {
+                    context_.currentDevice = deviceKey;
+                    emit logOutput(QString("连接TCP成功: %1").arg(deviceKey));
+                } else {
+                    result.success = false;
+                    result.message = QString("连接TCP失败: %1").arg(deviceKey);
+                    return result;
+                }
+            } else {
+                context_.currentDevice = deviceKey;
+                emit logOutput(QString("TCP设备未注册，记录连接目标: %1").arg(deviceKey));
+            }
+        } else {
+            context_.currentDevice = deviceKey;
+            emit logOutput(QString("设备管理器未设置，记录连接目标: %1").arg(deviceKey));
+        }
+    } else if (type == "DEVICE") {
+        // 通过设备ID连接: CONNECT DEVICE "设备名称"
+        if (cmd.arguments.size() < 2) {
+            result.success = false;
+            result.message = "DEVICE连接参数不足";
+            return result;
+        }
+        QString deviceName = cmd.arguments[1];
+        
+        if (deviceManager_) {
+            auto devices = deviceManager_->findDevicesByName(deviceName);
+            if (!devices.isEmpty()) {
+                auto device = devices.first();
+                if (device->connect(device->getConfiguration())) {
+                    context_.currentDevice = deviceName;
+                    emit logOutput(QString("连接设备成功: %1").arg(deviceName));
+                } else {
+                    result.success = false;
+                    result.message = QString("连接设备失败: %1").arg(deviceName);
+                    return result;
+                }
+            } else {
+                result.success = false;
+                result.message = QString("设备未找到: %1").arg(deviceName);
+                return result;
+            }
+        } else {
+            result.success = false;
+            result.message = "设备管理器未设置";
+            return result;
         }
     } else {
         result.success = false;
@@ -354,12 +439,39 @@ ExecutionResult ScriptExecutor::executeDisconnect(const ScriptCommand& cmd)
 {
     ExecutionResult result;
     
-    if (deviceManager_ && !context_.currentDevice.isEmpty()) {
-        // TODO: 调用设备管理器断开
-        emit logOutput(QString("断开设备: %1").arg(context_.currentDevice));
+    QString deviceName = cmd.arguments.isEmpty() ? context_.currentDevice : cmd.arguments[0];
+    
+    if (deviceName.isEmpty()) {
+        result.success = false;
+        result.message = "没有可断开的设备";
+        return result;
     }
     
-    context_.currentDevice.clear();
+    if (deviceManager_) {
+        // 尝试通过名称查找设备
+        auto devices = deviceManager_->findDevicesByName(deviceName);
+        if (!devices.isEmpty()) {
+            auto device = devices.first();
+            device->disconnect();
+            emit logOutput(QString("断开设备成功: %1").arg(deviceName));
+        } else {
+            // 尝试通过ID查找
+            auto device = deviceManager_->getDevice(deviceName);
+            if (device) {
+                device->disconnect();
+                emit logOutput(QString("断开设备成功: %1").arg(deviceName));
+            } else {
+                emit logOutput(QString("设备未找到: %1").arg(deviceName));
+            }
+        }
+    } else {
+        emit logOutput(QString("设备管理器未设置，记录断开: %1").arg(deviceName));
+    }
+    
+    if (deviceName == context_.currentDevice) {
+        context_.currentDevice.clear();
+    }
+    
     result.success = true;
     return result;
 }

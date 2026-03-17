@@ -6,10 +6,13 @@
  */
 
 #include "devicepanel.h"
+#include "core/devicemanager/devicemanager.h"
+#include "core/devicemanager/idevice.h"
 #include "log/logger.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QMessageBox>
 
 namespace DeviceStudio {
 
@@ -20,38 +23,130 @@ DevicePanel::DevicePanel(QWidget* parent)
     refreshDeviceList();
 }
 
+void DevicePanel::setDeviceManager(std::shared_ptr<DeviceManager> manager)
+{
+    if (deviceManager_) {
+        disconnect(deviceManager_.get(), nullptr, this, nullptr);
+    }
+    
+    deviceManager_ = manager;
+    
+    if (deviceManager_) {
+        // 连接设备管理器信号
+        connect(deviceManager_.get(), &DeviceManager::deviceAdded,
+                this, [this](const QString&) { refreshDeviceList(); });
+        connect(deviceManager_.get(), &DeviceManager::deviceRemoved,
+                this, [this](const QString&) { refreshDeviceList(); });
+        connect(deviceManager_.get(), &DeviceManager::deviceStateChanged,
+                this, [this](const QString&, DeviceState) { refreshDeviceList(); });
+    }
+    
+    refreshDeviceList();
+}
+
 void DevicePanel::refreshDeviceList()
 {
     deviceTree_->clear();
     
-    // TODO: 从设备管理器获取设备列表
-    // 这里添加示例数据
-    QTreeWidgetItem* serialItem = new QTreeWidgetItem(deviceTree_, QStringList{tr("串口设备")});
-    serialItem->setExpanded(true);
+    if (!deviceManager_) {
+        updateButtonStates();
+        return;
+    }
     
-    QTreeWidgetItem* com3Item = new QTreeWidgetItem(serialItem, QStringList{"COM3", "115200", tr("已断开")});
-    com3Item->setData(0, Qt::UserRole, "device_001");
+    // 按类型分组设备
+    QMap<QString, QTreeWidgetItem*> categoryItems;
     
-    QTreeWidgetItem* com4Item = new QTreeWidgetItem(serialItem, QStringList{"COM4", "9600", tr("已断开")});
-    com4Item->setData(0, Qt::UserRole, "device_002");
-    
-    QTreeWidgetItem* networkItem = new QTreeWidgetItem(deviceTree_, QStringList{tr("网络设备")});
-    networkItem->setExpanded(true);
-    
-    QTreeWidgetItem* tcpItem = new QTreeWidgetItem(networkItem, QStringList{"192.168.1.100:5000", "TCP", tr("已断开")});
-    tcpItem->setData(0, Qt::UserRole, "device_003");
+    auto devices = deviceManager_->getAllDevices();
+    for (const auto& device : devices) {
+        if (!device) continue;
+        
+        QString deviceType;
+        switch (device->deviceType()) {
+        case DeviceType::Serial:
+            deviceType = tr("串口设备");
+            break;
+        case DeviceType::TcpClient:
+        case DeviceType::TcpServer:
+            deviceType = tr("网络设备");
+            break;
+        case DeviceType::Udp:
+            deviceType = tr("UDP设备");
+            break;
+        case DeviceType::ModbusRtu:
+        case DeviceType::ModbusTcp:
+            deviceType = tr("Modbus设备");
+            break;
+        case DeviceType::Can:
+            deviceType = tr("CAN设备");
+            break;
+        default:
+            deviceType = tr("其他设备");
+            break;
+        }
+        
+        // 获取或创建分类节点
+        QTreeWidgetItem* categoryItem = categoryItems.value(deviceType, nullptr);
+        if (!categoryItem) {
+            categoryItem = new QTreeWidgetItem(deviceTree_, QStringList{deviceType});
+            categoryItem->setExpanded(true);
+            categoryItems[deviceType] = categoryItem;
+        }
+        
+        // 创建设备节点
+        QString status;
+        switch (device->deviceState()) {
+        case DeviceState::Connected:
+            status = tr("已连接");
+            break;
+        case DeviceState::Connecting:
+            status = tr("连接中");
+            break;
+        case DeviceState::Disconnecting:
+            status = tr("断开中");
+            break;
+        case DeviceState::Error:
+            status = tr("错误");
+            break;
+        default:
+            status = tr("已断开");
+            break;
+        }
+        
+        // 获取设备参数信息
+        QString paramInfo;
+        QVariantMap config = device->getConfiguration();
+        if (config.contains("port")) {
+            paramInfo = config["port"].toString();
+            if (config.contains("baudRate")) {
+                paramInfo += " " + config["baudRate"].toString();
+            }
+        } else if (config.contains("host")) {
+            paramInfo = config["host"].toString();
+            if (config.contains("port")) {
+                paramInfo += ":" + config["port"].toString();
+            }
+        }
+        
+        QTreeWidgetItem* deviceItem = new QTreeWidgetItem(categoryItem, 
+            QStringList{device->deviceName(), paramInfo, status});
+        deviceItem->setData(0, Qt::UserRole, device->deviceId());
+        
+        // 根据状态设置颜色
+        if (device->deviceState() == DeviceState::Connected) {
+            deviceItem->setForeground(2, QColor(Qt::darkGreen));
+        } else if (device->deviceState() == DeviceState::Error) {
+            deviceItem->setForeground(2, QColor(Qt::red));
+        }
+    }
     
     updateButtonStates();
-    
-    DS_LOG_INFO("Device list refreshed");
+    DS_LOG_DEBUG("Device list refreshed, count: " + std::to_string(devices.size()));
 }
 
 void DevicePanel::onAddDevice()
 {
     DS_LOG_INFO("Add device requested");
     emit addDeviceRequested();
-    
-    // TODO: 打开添加设备对话框
 }
 
 void DevicePanel::onRemoveDevice()
@@ -63,7 +158,20 @@ void DevicePanel::onRemoveDevice()
     
     DS_LOG_INFO("Remove device requested: " + deviceId.toStdString());
     
-    // TODO: 从设备管理器移除设备
+    // 确认删除
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, tr("确认删除"),
+        tr("确定要删除此设备吗？"),
+        QMessageBox::Yes | QMessageBox::No
+    );
+    
+    if (reply == QMessageBox::Yes) {
+        if (deviceManager_ && deviceManager_->removeDevice(deviceId)) {
+            DS_LOG_INFO("Device removed: " + deviceId.toStdString());
+        } else {
+            DS_LOG_ERROR("Failed to remove device: " + deviceId.toStdString());
+        }
+    }
     
     refreshDeviceList();
 }
@@ -75,11 +183,24 @@ void DevicePanel::onConnectDevice()
         return;
     }
     
+    if (!deviceManager_) {
+        return;
+    }
+    
     DS_LOG_INFO("Connect device requested: " + deviceId.toStdString());
     
-    // TODO: 连接设备
+    auto device = deviceManager_->getDevice(deviceId);
+    if (device) {
+        bool result = device->connect(device->getConfiguration());
+        if (result) {
+            DS_LOG_INFO("Device connected: " + deviceId.toStdString());
+            emit deviceConnectionChanged(true);
+        } else {
+            DS_LOG_ERROR("Failed to connect device: " + deviceId.toStdString());
+            QMessageBox::warning(this, tr("连接失败"), tr("无法连接到设备"));
+        }
+    }
     
-    emit deviceConnectionChanged(true);
     refreshDeviceList();
 }
 
@@ -90,11 +211,19 @@ void DevicePanel::onDisconnectDevice()
         return;
     }
     
+    if (!deviceManager_) {
+        return;
+    }
+    
     DS_LOG_INFO("Disconnect device requested: " + deviceId.toStdString());
     
-    // TODO: 断开设备
+    auto device = deviceManager_->getDevice(deviceId);
+    if (device) {
+        device->disconnect();
+        DS_LOG_INFO("Device disconnected: " + deviceId.toStdString());
+        emit deviceConnectionChanged(false);
+    }
     
-    emit deviceConnectionChanged(false);
     refreshDeviceList();
 }
 
@@ -115,8 +244,13 @@ void DevicePanel::onItemDoubleClicked(QTreeWidgetItem* item, int column)
     QString deviceId = item->data(0, Qt::UserRole).toString();
     if (!deviceId.isEmpty()) {
         DS_LOG_INFO("Device double-clicked: " + deviceId.toStdString());
-        // TODO: 打开设备详情或切换到数据终端
+        emit deviceSelected(deviceId);
     }
+}
+
+QString DevicePanel::deviceTypeToCategory(const QString& deviceType) const
+{
+    return deviceType;
 }
 
 void DevicePanel::setupUi()

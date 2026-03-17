@@ -7,6 +7,9 @@
 
 #include "deviceconfigdialog.h"
 #include "communication/serial/serialport.h"
+#include "communication/tcp/tcpclient.h"
+#include "communication/tcp/tcpserver.h"
+#include "communication/udp/udpsocket.h"
 #include "utils/log/logger.h"
 
 #include <QVBoxLayout>
@@ -15,6 +18,10 @@
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QSerialPortInfo>
+#include <QTcpSocket>
+#include <QUdpSocket>
+#include <QEventLoop>
+#include <QApplication>
 
 namespace DeviceStudio {
 
@@ -310,7 +317,128 @@ void DeviceConfigDialog::onRefreshSerialPorts()
 
 void DeviceConfigDialog::onTestConnection()
 {
-    QMessageBox::information(this, tr("测试连接"), tr("测试连接功能待实现"));
+    // 禁用测试按钮，显示测试中
+    testButton_->setEnabled(false);
+    testButton_->setText(tr("测试中..."));
+    QApplication::processEvents();
+    
+    bool success = false;
+    QString errorMsg;
+    
+    switch (deviceType()) {
+        case DeviceTypeConfig::Serial:
+            success = testSerialConnection(errorMsg);
+            break;
+        case DeviceTypeConfig::TcpClient:
+            success = testTcpClientConnection(errorMsg);
+            break;
+        case DeviceTypeConfig::TcpServer:
+            success = testTcpServerConnection(errorMsg);
+            break;
+        case DeviceTypeConfig::Udp:
+            success = testUdpConnection(errorMsg);
+            break;
+        case DeviceTypeConfig::ModbusRtu:
+            // Modbus RTU 使用串口连接
+            success = testSerialConnection(errorMsg);
+            break;
+        case DeviceTypeConfig::ModbusTcp:
+            // Modbus TCP 使用TCP连接
+            success = testTcpClientConnection(errorMsg);
+            break;
+        default:
+            errorMsg = tr("未知的设备类型");
+            break;
+    }
+    
+    // 恢复按钮状态
+    testButton_->setEnabled(true);
+    testButton_->setText(tr("测试连接"));
+    
+    // 显示结果
+    if (success) {
+        QMessageBox::information(this, tr("测试连接"), tr("连接成功！"));
+    } else {
+        QMessageBox::warning(this, tr("测试连接"), tr("连接失败: %1").arg(errorMsg));
+    }
+}
+
+bool DeviceConfigDialog::testSerialConnection(QString& errorMsg)
+{
+    QString portName = serialPortCombo_->currentText();
+    if (portName.isEmpty()) {
+        errorMsg = tr("请选择串口");
+        return false;
+    }
+    
+    QSerialPort serial;
+    serial.setPortName(portName);
+    serial.setBaudRate(baudRateCombo_->currentText().toInt());
+    serial.setDataBits(static_cast<QSerialPort::DataBits>(dataBitsCombo_->currentText().toInt()));
+    serial.setParity(static_cast<QSerialPort::Parity>(parityCombo_->currentData().toInt()));
+    serial.setStopBits(static_cast<QSerialPort::StopBits>(stopBitsCombo_->currentData().toInt()));
+    serial.setFlowControl(static_cast<QSerialPort::FlowControl>(flowControlCombo_->currentData().toInt()));
+    
+    if (serial.open(QIODevice::ReadWrite)) {
+        serial.close();
+        return true;
+    } else {
+        errorMsg = serial.errorString();
+        return false;
+    }
+}
+
+bool DeviceConfigDialog::testTcpClientConnection(QString& errorMsg)
+{
+    QString host = tcpClientHostEdit_->text();
+    int port = tcpClientPortSpin_->value();
+    int timeout = tcpClientTimeoutSpin_->value();
+    
+    if (host.isEmpty()) {
+        errorMsg = tr("请输入服务器地址");
+        return false;
+    }
+    
+    QTcpSocket socket;
+    socket.connectToHost(host, port);
+    
+    if (socket.waitForConnected(timeout)) {
+        socket.disconnectFromHost();
+        return true;
+    } else {
+        errorMsg = socket.errorString();
+        return false;
+    }
+}
+
+bool DeviceConfigDialog::testTcpServerConnection(QString& errorMsg)
+{
+    QString address = tcpServerAddressEdit_->text();
+    int port = tcpServerPortSpin_->value();
+    
+    QTcpServer server;
+    if (server.listen(QHostAddress(address), port)) {
+        server.close();
+        return true;
+    } else {
+        errorMsg = server.errorString();
+        return false;
+    }
+}
+
+bool DeviceConfigDialog::testUdpConnection(QString& errorMsg)
+{
+    QString localAddress = udpLocalAddressEdit_->text();
+    int localPort = udpLocalPortSpin_->value();
+    
+    QUdpSocket socket;
+    if (socket.bind(QHostAddress(localAddress), localPort)) {
+        socket.close();
+        return true;
+    } else {
+        errorMsg = socket.errorString();
+        return false;
+    }
 }
 
 void DeviceConfigDialog::onAccept()

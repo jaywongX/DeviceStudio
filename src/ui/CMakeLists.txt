@@ -7,6 +7,7 @@ set(UI_SOURCES
     terminal/terminalwidget.cpp
     scripteditor/scripteditorwidget.cpp
     dialogs/deviceconfigdialog.cpp
+    dialogs/settingsdialog.cpp
     monitor/datamonitorpanel.cpp
     thememanager.cpp
     shortcutmanager.cpp
@@ -19,6 +20,7 @@ set(UI_HEADERS
     terminal/terminalwidget.h
     scripteditor/scripteditorwidget.h
     dialogs/deviceconfigdialog.h
+    dialogs/settingsdialog.h
     monitor/datamonitorpanel.h
     thememanager.h
     shortcutmanager.h
