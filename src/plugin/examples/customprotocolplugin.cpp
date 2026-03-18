@@ -2,7 +2,7 @@
  * @file customprotocolplugin.cpp
  * @brief 自定义协议插件实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "customprotocolplugin.h"

@@ -2,7 +2,7 @@
  * @file checksum.cpp
  * @brief 校验和计算实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "checksum.h"

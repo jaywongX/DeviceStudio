@@ -2,7 +2,7 @@
  * @file devicepanel.h
  * @brief 设备面板类
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #pragma once

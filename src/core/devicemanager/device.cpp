@@ -2,7 +2,7 @@
  * @file device.cpp
  * @brief 设备基类实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "device.h"

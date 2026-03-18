@@ -2,7 +2,7 @@
  * @file mockcommunicationplugin.h
  * @brief Mock通信插件示例
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  * 
  * 这是一个模拟通信插件，用于测试和演示
  */

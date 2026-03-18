@@ -1,0 +1,33 @@
+# DeviceStudio 自动化测试脚本示例
+# 功能：串口设备通信测试
+
+// 设置变量
+SET baud_rate = 9600
+SET timeout = 2000
+SET expected_count = 10
+
+// 连接串口设备
+CONNECT COM3 baud=${baud_rate}
+
+// 等待设备稳定
+SLEEP 500
+
+// 发送查询命令
+SEND "AA0100AB"
+LOG "已发送查询命令"
+
+// 等待响应
+EXPECT "AA81" ${timeout}
+
+// 循环读取数据
+FOR i = 1 TO ${expected_count}
+    SEND "AA0100AB"
+    EXPECT "AA81" ${timeout}
+    LOG "收到第 ${i} 条数据"
+    SLEEP 100
+ENDFOR
+
+// 断开连接
+DISCONNECT
+
+LOG "测试完成"

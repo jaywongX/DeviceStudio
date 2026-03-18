@@ -1,0 +1,89 @@
+{
+    "name": "Demo Project",
+    "description": "DeviceStudio 示例项目",
+    "version": "1.0.0",
+    "author": "Developer",
+    "created": "2025-01-01T00:00:00Z",
+    "modified": "2025-01-01T00:00:00Z",
+    
+    "devices": [
+        {
+            "id": "device-001",
+            "name": "温度传感器",
+            "type": "serial",
+            "enabled": true,
+            "config": {
+                "portName": "COM3",
+                "baudRate": 9600,
+                "dataBits": 8,
+                "parity": "None",
+                "stopBits": 1
+            },
+            "protocol": "temp_sensor.json"
+        },
+        {
+            "id": "device-002",
+            "name": "Modbus设备",
+            "type": "serial",
+            "enabled": false,
+            "config": {
+                "portName": "COM4",
+                "baudRate": 19200,
+                "dataBits": 8,
+                "parity": "Even",
+                "stopBits": 1
+            },
+            "protocol": "modbus_rtu_template.json"
+        }
+    ],
+    
+    "scripts": [
+        {
+            "id": "script-001",
+            "name": "温度采集脚本",
+            "path": "scripts/temp_collect.txt",
+            "description": "周期性读取温度传感器数据"
+        }
+    ],
+    
+    "views": {
+        "charts": [
+            {
+                "id": "chart-001",
+                "name": "温度曲线",
+                "dataSource": "device-001.temperature",
+                "maxPoints": 1000,
+                "autoScale": true
+            }
+        ],
+        "gauges": [
+            {
+                "id": "gauge-001",
+                "name": "当前温度",
+                "dataSource": "device-001.temperature",
+                "min": -40,
+                "max": 85,
+                "unit": "°C"
+            }
+        ],
+        "monitors": [
+            {
+                "id": "monitor-001",
+                "name": "传感器状态",
+                "columns": ["温度", "湿度", "状态"],
+                "dataSources": [
+                    "device-001.temperature",
+                    "device-001.humidity",
+                    "device-001.status"
+                ]
+            }
+        ]
+    },
+    
+    "settings": {
+        "autoConnect": false,
+        "logLevel": "info",
+        "theme": "light",
+        "language": "zh_CN"
+    }
+}

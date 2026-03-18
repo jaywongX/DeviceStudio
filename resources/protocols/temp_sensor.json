@@ -1,0 +1,72 @@
+{
+    "name": "温度传感器协议",
+    "version": "1.0",
+    "description": "用于读取温度传感器数据的协议定义示例",
+    "endian": "little",
+    
+    "frames": {
+        "query": {
+            "name": "查询温度",
+            "description": "向传感器发送温度查询命令",
+            "direction": "send",
+            "format": [
+                {"name": "header", "type": "uint8", "value": "0xAA", "description": "帧头"},
+                {"name": "type", "type": "uint8", "value": "0x01", "description": "命令类型：查询"},
+                {"name": "length", "type": "uint8", "value": "0", "description": "数据长度"},
+                {"name": "checksum", "type": "uint8", "algorithm": "xor", "fields": ["type", "length"], "description": "校验和"}
+            ]
+        },
+        "response": {
+            "name": "温度响应",
+            "description": "传感器返回的温度数据",
+            "direction": "receive",
+            "format": [
+                {"name": "header", "type": "uint8", "value": "0xAA", "description": "帧头"},
+                {"name": "type", "type": "uint8", "value": "0x81", "description": "响应类型"},
+                {"name": "length", "type": "uint8", "description": "数据长度"},
+                {"name": "temperature", "type": "int16", "scale": 0.1, "unit": "°C", "description": "温度值(×0.1)"},
+                {"name": "humidity", "type": "uint16", "scale": 0.1, "unit": "%", "description": "湿度值(×0.1)"},
+                {"name": "status", "type": "uint8", "description": "状态码：0=正常，1=传感器错误"},
+                {"name": "checksum", "type": "uint8", "algorithm": "xor", "fields": ["type", "length", "temperature", "humidity", "status"], "description": "校验和"}
+            ],
+            "validation": {
+                "checksum": {
+                    "algorithm": "xor",
+                    "start": 1,
+                    "end": -1,
+                    "position": -1
+                }
+            }
+        }
+    },
+    
+    "variables": {
+        "temperature": {
+            "source": "response.temperature",
+            "displayName": "温度",
+            "unit": "°C",
+            "range": [-40, 85],
+            "precision": 1
+        },
+        "humidity": {
+            "source": "response.humidity",
+            "displayName": "湿度",
+            "unit": "%",
+            "range": [0, 100],
+            "precision": 1
+        },
+        "status": {
+            "source": "response.status",
+            "displayName": "状态",
+            "mapping": {
+                "0": "正常",
+                "1": "传感器错误"
+            }
+        }
+    },
+    
+    "display": {
+        "order": ["temperature", "humidity", "status"],
+        "format": "table"
+    }
+}

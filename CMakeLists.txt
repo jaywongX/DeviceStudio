@@ -36,8 +36,8 @@ include(utils)
 # 查找 Qt
 # ============================================================================
 # 优先 Qt6，回退 Qt5
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent Test)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets SerialPort Network SerialBus PrintSupport Concurrent Test)
 
 # 可选 Qt 模块
 if(Qt${QT_VERSION_MAJOR}Charts_FOUND)
@@ -70,10 +70,18 @@ if(BUILD_TESTS)
 endif()
 
 # ============================================================================
+# 资源文件
+# ============================================================================
+set(RESOURCES
+    resources/resources.qrc
+)
+
+# ============================================================================
 # 可执行文件
 # ============================================================================
 add_executable(${PROJECT_NAME}
     src/main/main.cpp
+    ${RESOURCES}
 )
 
 # 链接库

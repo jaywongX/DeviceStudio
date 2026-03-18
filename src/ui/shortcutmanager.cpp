@@ -2,7 +2,7 @@
  * @file shortcutmanager.cpp
  * @brief 快捷键管理器实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "shortcutmanager.h"

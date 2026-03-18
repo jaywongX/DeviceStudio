@@ -2,7 +2,7 @@
  * @file scripteditorwidget.cpp
  * @brief 脚本编辑器组件实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "scripteditorwidget.h"

@@ -2,7 +2,7 @@
  * @file terminalwidget.cpp
  * @brief 数据终端组件实现
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #include "terminalwidget.h"

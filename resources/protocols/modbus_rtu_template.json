@@ -1,0 +1,129 @@
+{
+    "name": "Modbus RTU 协议模板",
+    "version": "1.0",
+    "description": "Modbus RTU 通用协议定义模板",
+    "endian": "big",
+    
+    "frames": {
+        "read_holding_registers": {
+            "name": "读保持寄存器",
+            "description": "读取从机的保持寄存器数据",
+            "direction": "send",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "value": "0x03", "description": "功能码：读保持寄存器"},
+                {"name": "start_addr", "type": "uint16", "description": "起始地址"},
+                {"name": "quantity", "type": "uint16", "description": "寄存器数量"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "fields": ["slave_id", "function", "start_addr", "quantity"], "description": "CRC16校验"}
+            ]
+        },
+        "read_holding_response": {
+            "name": "读保持寄存器响应",
+            "description": "从机返回的寄存器数据",
+            "direction": "receive",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "value": "0x03", "description": "功能码"},
+                {"name": "byte_count", "type": "uint8", "description": "字节数"},
+                {"name": "data", "type": "bytes", "length": "byte_count", "description": "寄存器数据"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "description": "CRC16校验"}
+            ],
+            "validation": {
+                "crc": {
+                    "algorithm": "crc16_modbus",
+                    "start": 0,
+                    "end": -2,
+                    "position": -2
+                }
+            }
+        },
+        "read_input_registers": {
+            "name": "读输入寄存器",
+            "description": "读取从机的输入寄存器数据",
+            "direction": "send",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "value": "0x04", "description": "功能码：读输入寄存器"},
+                {"name": "start_addr", "type": "uint16", "description": "起始地址"},
+                {"name": "quantity", "type": "uint16", "description": "寄存器数量"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "description": "CRC16校验"}
+            ]
+        },
+        "write_single_register": {
+            "name": "写单个寄存器",
+            "description": "向从机写入单个寄存器值",
+            "direction": "send",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "value": "0x06", "description": "功能码：写单个寄存器"},
+                {"name": "addr", "type": "uint16", "description": "寄存器地址"},
+                {"name": "value", "type": "uint16", "description": "写入值"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "description": "CRC16校验"}
+            ]
+        },
+        "write_multiple_registers": {
+            "name": "写多个寄存器",
+            "description": "向从机写入多个寄存器值",
+            "direction": "send",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "value": "0x10", "description": "功能码：写多个寄存器"},
+                {"name": "start_addr", "type": "uint16", "description": "起始地址"},
+                {"name": "quantity", "type": "uint16", "description": "寄存器数量"},
+                {"name": "byte_count", "type": "uint8", "description": "字节数"},
+                {"name": "data", "type": "bytes", "description": "寄存器数据"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "description": "CRC16校验"}
+            ]
+        },
+        "exception_response": {
+            "name": "异常响应",
+            "description": "从机返回的异常响应",
+            "direction": "receive",
+            "format": [
+                {"name": "slave_id", "type": "uint8", "description": "从机地址"},
+                {"name": "function", "type": "uint8", "mask": "0x80", "description": "功能码(最高位置1)"},
+                {"name": "exception_code", "type": "uint8", "description": "异常码"},
+                {"name": "crc", "type": "uint16", "algorithm": "crc16_modbus", "description": "CRC16校验"}
+            ],
+            "variables": {
+                "exception_code": {
+                    "mapping": {
+                        "1": "非法功能码",
+                        "2": "非法数据地址",
+                        "3": "非法数据值",
+                        "4": "从机设备故障",
+                        "5": "确认",
+                        "6": "从机设备忙",
+                        "8": "存储奇偶错误"
+                    }
+                }
+            }
+        }
+    },
+    
+    "common_parameters": {
+        "slave_id": {
+            "displayName": "从机地址",
+            "type": "uint8",
+            "range": [1, 247],
+            "default": 1
+        },
+        "baud_rate": {
+            "displayName": "波特率",
+            "type": "enum",
+            "options": [9600, 19200, 38400, 57600, 115200],
+            "default": 9600
+        },
+        "parity": {
+            "displayName": "校验",
+            "type": "enum",
+            "options": ["None", "Odd", "Even"],
+            "default": "None"
+        }
+    },
+    
+    "validation": {
+        "inter_frame_delay": "3.5 字符时间",
+        "response_timeout": "1000ms"
+    }
+}

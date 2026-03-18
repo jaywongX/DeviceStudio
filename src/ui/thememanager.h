@@ -2,7 +2,7 @@
  * @file thememanager.h
  * @brief 主题管理器
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #pragma once

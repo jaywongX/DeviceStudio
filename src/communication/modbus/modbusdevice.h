@@ -2,7 +2,7 @@
  * @file modbusdevice.h
  * @brief Modbus设备类
  * @author DeviceStudio Team
- * @date 2026-03-14
+ * @date 2025-02-14
  */
 
 #pragma once
